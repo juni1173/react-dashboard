@@ -52,7 +52,7 @@ function Register() {
     event.preventDefault();
 
     axios
-      .post("http://localhost/api/register.php", {
+      .post("https://blogpepper.com/backend/api/register.php", {
         username: username,
         email: email,
         password: password,
