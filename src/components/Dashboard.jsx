@@ -85,7 +85,7 @@ function Dashboard() {
     setFormLoading(true)
     setSelectedProduct(productId);
     try {
-      const response = await axios.get(`https://cretaluxurycruises.dev6.inglelandi.com//wp-json/wc-bookings/v1/products/${productId}`, {
+      const response = await axios.get(`https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc-bookings/v1/products/${productId}`, {
         auth: {
           username: "ck_cb8d0d61726f318ddc43be3407749e7a58360fe1",
           password: "cs_bd55fa6bc205f402e50fdc25876032bb9c45b2ba",
@@ -116,19 +116,48 @@ function Dashboard() {
     }
   };
   
-  const handleUpdate = () => {
-    console.warn({
-      selectedDate,
-      selectedProduct,
-      duration,
-      minPersons,
-      maxPersons,
-      minBlock,
-      minBlockUnit,
-      availability,
-      cruiseOptions,
-    });
-  };
+  const handleUpdate = async () => {
+    if (!selectedProduct) return;
+    setFormLoading(true);
+
+    try {
+      await axios.put(
+        `https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc-bookings/v1/products/${selectedProduct}`,
+        {
+          acf: {
+            cruise_duration: duration, // ACF field for duration
+            multiple_days_cruise: cruiseOptions.multipleDays,
+            day_cruise: cruiseOptions.dayCruise,
+            sunset_cruise: cruiseOptions.sunsetCruise,
+          },  
+          meta_data: [
+            {
+              key: "cruise_duration",
+              value: duration,
+            },
+          ],
+          min_block: minBlock,
+          min_block_unit: minBlockUnit.toLowerCase().replace("(s)", ""),
+          max_block: maxBlock,
+          max_block_unit: maxBlockUnit.toLowerCase().replace("(s)", ""),
+          default_date_availability: availability === "non-available" ? "" : availability,
+          min_persons: minPersons,
+          max_persons: maxPersons,
+        },
+        {
+          auth: {
+            username: "ck_cb8d0d61726f318ddc43be3407749e7a58360fe1",
+            password: "cs_bd55fa6bc205f402e50fdc25876032bb9c45b2ba",
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Update failed", error.response ? error.response.data : error);
+    }
+
+    setFormLoading(false);
+};
+
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -282,7 +311,7 @@ function Dashboard() {
                       margin="normal"
                     >
                       <MenuItem value="available">Available by default</MenuItem>
-                      <MenuItem value="not_available">Not available by default</MenuItem>
+                      <MenuItem value="non-available">Not available by default</MenuItem>
                     </TextField>
                     <Button variant="contained" color="primary" fullWidth onClick={handleUpdate} style={{ marginTop: "10px" }}>
                       Update
