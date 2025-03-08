@@ -2,11 +2,12 @@ import {BrowserRouter, Routes, Route, Link} from 'react-router-dom';
 import '@fontsource/roboto/400.css';
 import './App.css';
 import './bootstrap-grid.min.css';
-import Footer from './components/Footer';
+// import Footer from './components/Footer';
 import Register from './components/Register';
 import Login from './components/Login';
 import Logout from './components/Logout';
 import Dashboard from './components/Dashboard';
+import ProductDetail from "./components/ProductDetail";
 
 function App() {
   return (
@@ -18,9 +19,10 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/logout" element={<Logout />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
           </Routes>
         </BrowserRouter>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }
