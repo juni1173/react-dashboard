@@ -34,7 +34,8 @@ function List() {
   const [selectedVessel, setSelectedVessel] = useState("");
   const [filteredProducts, setFilteredProducts] = useState(products);
   const [productFields, setProductFields] = useState({});
-  const [dateAvailability, setDateAvailability] = useState(true);
+  // const [dateAvailability, setDateAvailability] = useState(true);
+  const [availabilityObject, setAvailabilityObject] = useState([]);
 
   const handleSlotToggle = (event, slot, product) => {
     const status = event.target.checked;
@@ -54,8 +55,6 @@ function List() {
             updatedProductFields[product].durationArray = updatedDurations;
           }
         }
-    
-        console.warn(updatedProductFields);
         return updatedProductFields;
       });
     // let availabilityArray = [];
@@ -81,9 +80,9 @@ function List() {
     // setSlotObject(duration);
     // console.warn(duration);
   };
-  const handleToggle = (event) => {
-    setDateAvailability(event.target.checked);
-  };
+  // const handleToggle = (event) => {
+  //   setDateAvailability(event.target.checked);
+  // };
   //const userData = JSON.parse(sessionStorage.getItem("userData"));
   // const username = userData?.username;
   const darkTheme = createTheme({
@@ -119,7 +118,6 @@ function List() {
         });
         const vessels = response.data.filter((category) => category.acf.category_type === "Vessel");
         const cruises = response.data.filter((category) => category.acf.category_type === "Cruise");
-        console.warn({cruises, vessels});
         setCategories({cruises, vessels});
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -160,9 +158,37 @@ function List() {
     }));
     setSlotLoading(false);
   };
- 
+  function updateDurationArrayAvailability(durationArray, availabilityObject, date) {
+
+    // console.warn(availabilityObject);
+    if (!durationArray || !availabilityObject || !availabilityObject) {
+      return durationArray; // Return original array if inputs are invalid
+    }
+  
+    return durationArray.map((durationSlot) => {
+      const matchingAvailability = availabilityObject.find((item) => {
+        const durationParts = durationSlot.duration.split(" - ");
+        return (
+          item.from_date === date &&
+          item.from === durationParts[0] &&
+          item.to === durationParts[1]
+        );
+      });
+  
+      if (matchingAvailability) {
+        return {
+          ...durationSlot,
+          availability: matchingAvailability.bookable === "yes",
+        };
+      } else {
+        return {
+          ...durationSlot,
+          availability: true, // Default to true if no match
+        };
+      }
+    });
+  }
   const calculateBookingSlots = (productId, startTime, bookingDuration, bufferTime) => {
-    console.warn(productId, startTime, bookingDuration, bufferTime);
     setSlotLoading(true);
   
     if (!startTime) {
@@ -200,14 +226,15 @@ function List() {
     const firstSlotEnd = calculateEndTime(startDate, bookingDuration * 60);
     const secondSlotStart = calculateEndTime(firstSlotEnd, bufferTime * 60); //buffer is added here
     const secondSlotEnd = calculateEndTime(secondSlotStart, bookingDuration * 60);
-  
-    updateDurationArray(productId, [
+    const finalArr = [
       {duration: `${formatTime(startDate)} - ${formatTime(firstSlotEnd)}`, availability: true},
       {duration: `${formatTime(secondSlotStart)} - ${formatTime(secondSlotEnd)}`, availability: true},
-    ]);
-  
-    // console.warn(productFields);
+    ];
+    updateDurationArray(productId, finalArr);
     setSlotLoading(false);
+    return finalArr;
+    // console.warn(productFields);
+    
   };
   function convertSlotsToString(slots) {
     if (!slots || slots.length === 0) {
@@ -220,39 +247,40 @@ function List() {
   
     return availableSlots.join(" or ");
   }
-  function createAvailabilityDateObject(date_availability) {
-    if (date_availability) {
-      return { availability: [] };
-    }
+  // function createAvailabilityDateObject(date_availability) {
+  //   if (date_availability) {
+  //     return { availability: [] };
+  //   }
   
-    const availability = [{
-        type: 'custom:daterange',
-        bookable: date_availability ? 'yes' : 'no', // All are "no" based on your example
-        priority: 10,
-        from: '00:00',
-        to: '24:00',
-        from_date: selectedDate,
-        to_date: selectedDate,
-      }];
+  //   const availability = [{
+  //       type: 'custom:daterange',
+  //       bookable: date_availability ? 'yes' : 'no', // All are "no" based on your example
+  //       priority: 10,
+  //       from: '00:00',
+  //       to: '24:00',
+  //       from_date: selectedDate,
+  //       to_date: selectedDate,
+  //     }];
   
-    return { availability };
-  }
+  //   return { availability };
+  // }
   function createAvailabilitySlotObject(durationArray) {
     if (!durationArray || durationArray.length === 0) {
-      return { availability: [] };
+      return availabilityObject || { availability: [] }; // Return existing or empty
     }
   
-    const hasUnavailableSlot = durationArray.some((slot) => !slot.availability);
+    // const hasUnavailableSlot = durationArray.some((slot) => !slot.availability);
   
-    if (!hasUnavailableSlot) {
-      return { availability: [] };
-    }
+    // if (!hasUnavailableSlot) {
+    //   console.warn('2');
+    //   return availabilityObject || { availability: [] }; // Return existing or empty
+    // }
   
-    const availability = durationArray
-      .filter((slot) => !slot.availability) // Filter only unavailable slots (availability: false)
+    const newAvailability = durationArray
+      // .filter((slot) => !slot.availability)
       .map((slot) => ({
         type: 'custom:daterange',
-        bookable: 'no', // All are "no" based on your example
+        bookable: slot.availability ? 'yes' : 'no',
         priority: 10,
         from: slot.duration.split(' - ')[0],
         to: slot.duration.split(' - ')[1],
@@ -260,18 +288,45 @@ function List() {
         to_date: selectedDate,
       }));
   
-    return { availability };
+    if (!availabilityObject) {
+      return { availability: newAvailability };
+    }
+  
+    const updatedAvailability = availabilityObject.map((existingItem) => {
+      const matchingNewItem = newAvailability.find(
+        (newItem) =>
+          newItem.from === existingItem.from &&
+          newItem.to === existingItem.to &&
+          newItem.from_date === existingItem.from_date
+      );
+        
+      if (matchingNewItem) {
+        return { ...existingItem, bookable: matchingNewItem.bookable }; // Update bookable
+      }
+      return existingItem;
+    });
+    
+    const itemsToAdd = newAvailability.filter(
+      (newItem) =>
+        !updatedAvailability.some(
+          (existingItem) =>
+            existingItem.from === newItem.from &&
+            existingItem.to === newItem.to &&
+            existingItem.from_date === newItem.from_date
+        )
+    );
+  
+    return { availability: [...updatedAvailability, ...itemsToAdd] };
   }
  const handleUpdate = async () => {
-    const product = productFields[selectedProduct];
-  
+    const product = productFields[selectedProduct.id];
+    console.warn(createAvailabilitySlotObject(product?.durationArray).availability);
+    
     if (!selectedProduct) return;
     // setFormLoading(true);
-    
-
     try {
       await axios.put(
-        `https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc-bookings/v1/products/${selectedProduct}`,
+        `https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc-bookings/v1/products/${selectedProduct.id}`,
         {
           acf: {
             cruise_duration: convertSlotsToString(product?.durationArray)|| [], // ACF field for duration
@@ -296,7 +351,8 @@ function List() {
           duration_type: product?.durationType,
           duration_unit: product?.durationUnit?.toLowerCase().replace("(s)", ""),
           duration: product?.durationInput,
-          availability: !dateAvailability ? createAvailabilityDateObject(dateAvailability).availability : createAvailabilitySlotObject(product?.durationArray).availability,
+          // availability: !dateAvailability ? createAvailabilityDateObject(dateAvailability).availability : createAvailabilitySlotObject(product?.durationArray).availability,
+          availability:  createAvailabilitySlotObject(product?.durationArray).availability,
         },
         {
           auth: {
@@ -343,8 +399,13 @@ const durationUnitMap = {
   hour: "Hour(s)",
   minute: "Minute(s)",
 };
+const handleDateChange = (product, date) => {
+  const availabilityObj = product.availability;
+  updateDurationArray(product.id, updateDurationArrayAvailability(calculateBookingSlots(product.id, product.first_block_time, product.duration, product.buffer_period), availabilityObj, date));
+   
+}
 const handleAccordionChange = (product) => (event, isExpanded) => {
-    setSelectedProduct(product.id);
+    setSelectedProduct(product);
   if (isExpanded) {
     setProductFields((prev) => ({
       ...prev,
@@ -359,7 +420,8 @@ const handleAccordionChange = (product) => (event, isExpanded) => {
         durationArray: [],
       },
     }));
-    calculateBookingSlots(product.id, product.first_block_time, product.duration, product.buffer_period);
+    handleDateChange(product, selectedDate);
+    setAvailabilityObject(product.availability);
   }
 };
 
@@ -403,7 +465,6 @@ const handleInputChange = (productId, field, value) => {
   
       if (field === "firstBlockTime" || field === "durationInput" || field === "buffer") {
         if (startTime !== "" && bookingDuration !== "" && bufferTime !== "") {
-          console.warn(productId, startTime, bookingDuration, bufferTime);
           calculateBookingSlots(productId, startTime, parseInt(bookingDuration), parseInt(bufferTime));
         } else {
           console.warn("One or more fields are empty. Calculation skipped.");
@@ -413,7 +474,10 @@ const handleInputChange = (productId, field, value) => {
       console.warn(`productId ${productId} not found in productFields.`);
     }
   };
-
+ const dateUpdateFunction = date => {
+    setSelectedDate(date);
+    handleDateChange(selectedProduct, date);
+  }
   return (
     <ThemeProvider theme={darkTheme}>
       <Container mb={4}>
@@ -556,17 +620,17 @@ const handleInputChange = (productId, field, value) => {
                         <StaticDatePicker
                         displayStaticWrapperAs="desktop"
                         value={selectedDate}
-                        onChange={(newDate) => setSelectedDate(dayjs(newDate).format('YYYY-MM-DD'))}
+                        onChange={(newDate) => dateUpdateFunction(dayjs(newDate).format('YYYY-MM-DD'))}
                         />
                     </LocalizationProvider>
                 </Card>
                 </Box>
-                <Box display="flex" gap={2} flexWrap="wrap" mt={2}>
+                <Box display="flex" flexDirection="row" justify-content="center" alignItems="center"  gap={2} flexWrap="wrap" mt={2}>
                  {slotLoading ? (
                     <CircularProgress />
                   ) : (
                     productFields[product.id]?.durationArray?.map((slot, index) => (
-                        <Card key={index} sx={{ p: 2, minWidth: 150, maxHeight: 30, textAlign: 'center', position: 'relative' }}>
+                        <Card key={index} sx={{ p: 2, minWidth: 300, maxHeight: 30, textAlign: 'center', position: 'relative' }}>
                         <Box sx={{ position: 'absolute', top: 5, right: 5 }}>
                             {(slot !== "Slot required Start Time" || slot !== "Slot required Booking Duration" || slot !== "Slot required Buffer Time") && (
                                 <FormControlLabel
@@ -582,11 +646,11 @@ const handleInputChange = (productId, field, value) => {
                               />
                             )}
                         </Box>
-                        <Typography style={{ marginTop: "20px" }} variant="body1">{slot.duration}</Typography>
+                        <Typography style={{ marginTop: "20px", fontSize: 'larger', letterSpacing:'2px', fontWeight:'700' }} variant="body1">{slot.duration}</Typography>
                       </Card>
                     ))
                   )}
-                  <Typography>
+                  {/* <Typography>
                   Availability on <br />
                     {selectedDate}
                   </Typography>
@@ -594,7 +658,7 @@ const handleInputChange = (productId, field, value) => {
                     style={{maxHeight: "30px", textAlign: "center"}}
                     control={<Switch checked={dateAvailability} onChange={handleToggle} />}
                     label={dateAvailability ? 'Not Bookable' : 'Bookable'} // Optional: change label dynamically
-                    />
+                    /> */}
                 </Box>
                 
                 <Grid container spacing={1}>
