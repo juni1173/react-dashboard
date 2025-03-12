@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 function Logout() {
-  axios.post('http://localhost/api/logout.php')
+  axios.post('https://blogpepper.com/backend/api/logout.php')
   .then((response) => {
     sessionStorage.clear();
     window.location.href = '/login';

@@ -8,6 +8,7 @@ import { LocalizationProvider, StaticDatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from 'dayjs';
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import Header from "./header";
 
 function List() {
   const navigate = useNavigate();
@@ -34,9 +35,12 @@ function List() {
   const [selectedVessel, setSelectedVessel] = useState("");
   const [filteredProducts, setFilteredProducts] = useState(products);
   const [productFields, setProductFields] = useState({});
-  // const [dateAvailability, setDateAvailability] = useState(true);
+   const [dateAvailability, setDateAvailability] = useState(true);
   const [availabilityObject, setAvailabilityObject] = useState([]);
 
+  const shouldDisableDate = (date) => {
+    return date.isBefore(dayjs().startOf('day'), 'day'); // Disable dates before today
+  };
   const handleSlotToggle = (event, slot, product) => {
     const status = event.target.checked;
     setProductFields((prev) => {
@@ -80,14 +84,17 @@ function List() {
     // setSlotObject(duration);
     // console.warn(duration);
   };
-  // const handleToggle = (event) => {
-  //   setDateAvailability(event.target.checked);
-  // };
+  const handleToggle = (event) => {
+    setDateAvailability(event.target.checked);
+  };
   //const userData = JSON.parse(sessionStorage.getItem("userData"));
   // const username = userData?.username;
   const darkTheme = createTheme({
     palette: {
       mode: "dark",
+      primary: {
+        main: '#1976d2', // Customize primary color
+      },
     },
     components: {
       MuiTableCell: {
@@ -105,7 +112,23 @@ function List() {
       navigate("/login");
     }
   }, [navigate]);
-
+  const fetchProducts = async () => {
+    try {
+      // const response = await axios.get("https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc/v3/products?per_page=50", {
+      const response = await axios.get("https://cretaluxurycruises.dev6.inglelandi.com//wp-json/wc-bookings/v1/products?per_page=50", {
+        auth: {
+          username: "ck_cb8d0d61726f318ddc43be3407749e7a58360fe1",
+          password: "cs_bd55fa6bc205f402e50fdc25876032bb9c45b2ba",
+        },
+      });
+      const activeProducts = response.data.filter((product) => product.status === "publish");
+      setProducts(activeProducts);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -125,23 +148,7 @@ function List() {
         setLoading(false);
       }
     };
-    const fetchProducts = async () => {
-      try {
-        // const response = await axios.get("https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc/v3/products?per_page=50", {
-        const response = await axios.get("https://cretaluxurycruises.dev6.inglelandi.com//wp-json/wc-bookings/v1/products?per_page=50", {
-          auth: {
-            username: "ck_cb8d0d61726f318ddc43be3407749e7a58360fe1",
-            password: "cs_bd55fa6bc205f402e50fdc25876032bb9c45b2ba",
-          },
-        });
-        const activeProducts = response.data.filter((product) => product.status === "publish");
-        setProducts(activeProducts);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  
 
     fetchProducts();
     fetchCategories();
@@ -247,23 +254,23 @@ function List() {
   
     return availableSlots.join(" or ");
   }
-  // function createAvailabilityDateObject(date_availability) {
-  //   if (date_availability) {
-  //     return { availability: [] };
-  //   }
+  function createAvailabilityDateObject(date_availability) {
+    if (date_availability) {
+      return { availability: [] };
+    }
   
-  //   const availability = [{
-  //       type: 'custom:daterange',
-  //       bookable: date_availability ? 'yes' : 'no', // All are "no" based on your example
-  //       priority: 10,
-  //       from: '00:00',
-  //       to: '24:00',
-  //       from_date: selectedDate,
-  //       to_date: selectedDate,
-  //     }];
+    const availability = [{
+        type: 'custom:daterange',
+        bookable: date_availability ? 'yes' : 'no', // All are "no" based on your example
+        priority: 10,
+        from: '00:00',
+        to: '24:00',
+        from_date: selectedDate,
+        to_date: selectedDate,
+      }];
   
-  //   return { availability };
-  // }
+    return { availability };
+  }
   function createAvailabilitySlotObject(durationArray) {
     if (!durationArray || durationArray.length === 0) {
       return availabilityObject || { availability: [] }; // Return existing or empty
@@ -320,12 +327,12 @@ function List() {
   }
  const handleUpdate = async () => {
     const product = productFields[selectedProduct.id];
-    console.warn(createAvailabilitySlotObject(product?.durationArray).availability);
-    
+    console.warn(createAvailabilityDateObject(dateAvailability).availability);
+    // return false;
     if (!selectedProduct) return;
-    // setFormLoading(true);
+    setSlotLoading(true);
     try {
-      await axios.put(
+      const response = await axios.put(
         `https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc-bookings/v1/products/${selectedProduct.id}`,
         {
           acf: {
@@ -351,7 +358,7 @@ function List() {
           duration_type: product?.durationType,
           duration_unit: product?.durationUnit?.toLowerCase().replace("(s)", ""),
           duration: product?.durationInput,
-          // availability: !dateAvailability ? createAvailabilityDateObject(dateAvailability).availability : createAvailabilitySlotObject(product?.durationArray).availability,
+           availability: !dateAvailability ? createAvailabilityDateObject(dateAvailability).availability : createAvailabilitySlotObject(product?.durationArray).availability,
           availability:  createAvailabilitySlotObject(product?.durationArray).availability,
         },
         {
@@ -361,11 +368,18 @@ function List() {
           },
         }
       );
+      
+       // Successful API call
+    //    setProductFields((prevFields) => ({
+    //     ...prevFields,
+    //     [selectedProduct.id]: response.data,
+    //   }));
+    // handleAccordionChange(selectedProduct)(null, true); // Trigger accordion change
     } catch (error) {
       console.error("Update failed", error.response ? error.response.data : error);
     }
 
-    // setFormLoading(false);
+    setSlotLoading(false);
   };
 
 const filterProducts = (cruiseId, vesselId) => {
@@ -402,7 +416,6 @@ const durationUnitMap = {
 const handleDateChange = (product, date) => {
   const availabilityObj = product.availability;
   updateDurationArray(product.id, updateDurationArrayAvailability(calculateBookingSlots(product.id, product.first_block_time, product.duration, product.buffer_period), availabilityObj, date));
-   
 }
 const handleAccordionChange = (product) => (event, isExpanded) => {
     setSelectedProduct(product);
@@ -483,6 +496,7 @@ const handleInputChange = (productId, field, value) => {
       <Container mb={4}>
         <Grid container spacing={3}>
           <Grid item xs={12} sm={12} md={12}>
+          <Header />
             {loading ? (
               <CircularProgress />
             ) : (
@@ -561,6 +575,7 @@ const handleInputChange = (productId, field, value) => {
                       onChange={(e) => handleInputChange(product.id, "durationType", e.target.value)}
                       fullWidth
                       margin="normal"
+                      disabled
                     >
                       <MenuItem value="fixed">Fixed</MenuItem>
                       <MenuItem value="flexible">Flexible</MenuItem>
@@ -574,6 +589,7 @@ const handleInputChange = (productId, field, value) => {
                     onChange={(e) => handleInputChange(product.id, "durationUnit", e.target.value)}
                       fullWidth
                       margin="normal"
+                      disabled
                     >
                       {['Month(s)', 'Day(s)', 'Hour(s)', 'Minute(s)'].map((unit) => (
                             <MenuItem key={unit} value={unit}>
@@ -621,6 +637,7 @@ const handleInputChange = (productId, field, value) => {
                         displayStaticWrapperAs="desktop"
                         value={selectedDate}
                         onChange={(newDate) => dateUpdateFunction(dayjs(newDate).format('YYYY-MM-DD'))}
+                        shouldDisableDate={shouldDisableDate}
                         />
                     </LocalizationProvider>
                 </Card>
@@ -650,15 +667,20 @@ const handleInputChange = (productId, field, value) => {
                       </Card>
                     ))
                   )}
-                  {/* <Typography>
-                  Availability on <br />
-                    {selectedDate}
-                  </Typography>
-                <FormControlLabel
-                    style={{maxHeight: "30px", textAlign: "center"}}
-                    control={<Switch checked={dateAvailability} onChange={handleToggle} />}
-                    label={dateAvailability ? 'Not Bookable' : 'Bookable'} // Optional: change label dynamically
-                    /> */}
+                  {product.duration_unit === 'day' && (
+                    <>
+                    <Typography>
+                    Availability on <br />
+                      {selectedDate}
+                    </Typography>
+                      <FormControlLabel
+                          style={{maxHeight: "30px", textAlign: "center"}}
+                          control={<Switch checked={dateAvailability} onChange={handleToggle} />}
+                          label={dateAvailability ? 'Bookable' : 'Not Bookable'} // Optional: change label dynamically
+                          />
+                      </>
+                  )}
+                  
                 </Box>
                 
                 <Grid container spacing={1}>
@@ -689,9 +711,19 @@ const handleInputChange = (productId, field, value) => {
               {/* <Button variant="contained" color="primary" href={`/product/${product.id}`} sx={{ mt: 2 }}>
                 View Details
               </Button> */}
-              <Button variant="contained" color="primary" onClick={handleUpdate} sx={{ mt: 2 }}>
-                Update
-              </Button>
+               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleUpdate}
+                    sx={{
+                      padding: '12px 24px', // Adjust padding for a bigger button
+                      fontSize: '1rem', // Adjust font size if needed
+                    }}
+                  >
+                    Update
+                  </Button>
+                </Box>
             </Paper>
           </AccordionDetails>
         </Accordion>
