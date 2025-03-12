@@ -223,25 +223,34 @@ function List() {
       endDate.setMinutes(endDate.getMinutes() + duration);
       return endDate;
     };
-   
+  
     const formatTime = (date) => {
       const hours = String(date.getHours()).padStart(2, "0");
       const minutes = String(date.getMinutes()).padStart(2, "0");
       return `${hours}:${minutes}`;
     };
   
-    const firstSlotEnd = calculateEndTime(startDate, bookingDuration * 60);
-    const secondSlotStart = calculateEndTime(firstSlotEnd, bufferTime * 60); //buffer is added here
-    const secondSlotEnd = calculateEndTime(secondSlotStart, bookingDuration * 60);
-    const finalArr = [
-      {duration: `${formatTime(startDate)} - ${formatTime(firstSlotEnd)}`, availability: true},
-      {duration: `${formatTime(secondSlotStart)} - ${formatTime(secondSlotEnd)}`, availability: true},
-    ];
+    const finalArr = [];
+    let currentSlotStart = startDate;
+  
+    while (currentSlotStart.getDate() === startDate.getDate()) { // Check if still same day
+      const currentSlotEnd = calculateEndTime(currentSlotStart, bookingDuration * 60);
+  
+      if (currentSlotEnd.getDate() !== startDate.getDate()) {
+        break; // Stop if the end time is on next day
+      }
+  
+      finalArr.push({
+        duration: `${formatTime(currentSlotStart)} - ${formatTime(currentSlotEnd)}`,
+        availability: true,
+      });
+  
+      currentSlotStart = calculateEndTime(currentSlotEnd, bufferTime * 60); // Add buffer
+    }
+  
     updateDurationArray(productId, finalArr);
     setSlotLoading(false);
     return finalArr;
-    // console.warn(productFields);
-    
   };
   function convertSlotsToString(slots) {
     if (!slots || slots.length === 0) {
@@ -368,13 +377,41 @@ function List() {
           },
         }
       );
-      
-       // Successful API call
-    //    setProductFields((prevFields) => ({
-    //     ...prevFields,
-    //     [selectedProduct.id]: response.data,
-    //   }));
-    // handleAccordionChange(selectedProduct)(null, true); // Trigger accordion change
+      const updatedData = response.data
+      setProductFields((prev) => ({
+        ...prev,
+        [updatedData.id]: {
+          durationType: updatedData.duration_type || "fixed",
+          durationUnit: durationUnitMap[updatedData.duration_unit] || "Hour(s)",
+          durationInput: updatedData.duration || 1,
+          firstBlockTime: updatedData.first_block_time || "",
+          minPersons: updatedData.min_persons || 0,
+          maxPersons: updatedData.max_persons || 0,
+          buffer: updatedData.buffer_period || 0,
+          durationArray: [],
+        },
+      }));
+      setProducts((prevProducts) =>
+      prevProducts.map((product) => {
+        if (product.id === updatedData.id) {
+          return { ...product, ...updatedData };
+        }
+        return product;
+      })
+    );
+
+    setFilteredProducts((prevProducts) =>
+      prevProducts.map((product) => {
+        if (product.id === updatedData.id) {
+          return { ...product, ...updatedData };
+        }
+        return product;
+      })
+    );
+       handleDateChange(updatedData, selectedDate);
+      console.warn(updatedData.availability);
+       setAvailabilityObject(updatedData.availability);
+      setSelectedProduct(updatedData);
     } catch (error) {
       console.error("Update failed", error.response ? error.response.data : error);
     }
@@ -395,17 +432,15 @@ const filterProducts = (cruiseId, vesselId) => {
 // Handle change for cruise dropdown
 const handleCruiseChange = (event) => {
   const cruiseId = event.target.value;
-  setSelectedVessel(null);
   setSelectedCruise(cruiseId);
-  filterProducts(cruiseId, null);
+  filterProducts(cruiseId, selectedVessel || null);
 };
 
 // Handle change for vessel dropdown
 const handleVesselChange = (event) => {
   const vesselId = event.target.value;
-  setSelectedCruise(null);
   setSelectedVessel(vesselId);
-  filterProducts(null, vesselId);
+  filterProducts(selectedCruise || null, vesselId);
 };
 const durationUnitMap = {
   month: "Month(s)",
@@ -415,6 +450,7 @@ const durationUnitMap = {
 };
 const handleDateChange = (product, date) => {
   const availabilityObj = product.availability;
+  console.warn(product)
   updateDurationArray(product.id, updateDurationArrayAvailability(calculateBookingSlots(product.id, product.first_block_time, product.duration, product.buffer_period), availabilityObj, date));
 }
 const handleAccordionChange = (product) => (event, isExpanded) => {
@@ -609,7 +645,8 @@ const handleInputChange = (productId, field, value) => {
                       inputProps={{ min: 1 }}
                     />
                   </Box>
-                      <Box display="flex" gap={2} mt={2}>
+                  {productFields[product.id]?.durationUnit === 'hour' && (
+                    <Box display="flex" gap={2} mt={2}>
                       <TextField
                           label="First Block Time"
                           type="time"
@@ -629,6 +666,8 @@ const handleInputChange = (productId, field, value) => {
                         inputProps={{ min: 1 }}
                       />
                       </Box>
+                  )}
+                      
                 </Box>
                 <Box>
                 <Card>
