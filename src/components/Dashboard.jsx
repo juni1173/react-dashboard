@@ -142,6 +142,7 @@ function List() {
         const vessels = response.data.filter((category) => category.acf.category_type === "Vessel");
         const cruises = response.data.filter((category) => category.acf.category_type === "Cruise");
         setCategories({cruises, vessels});
+        setSelectedDate(dayjs(new Date()).format('YYYY-MM-DD'));
       } catch (error) {
         console.error("Error fetching products:", error);
       } finally {
@@ -409,7 +410,6 @@ function List() {
       })
     );
        handleDateChange(updatedData, selectedDate);
-      console.warn(updatedData.availability);
        setAvailabilityObject(updatedData.availability);
       setSelectedProduct(updatedData);
     } catch (error) {
@@ -474,7 +474,9 @@ const handleAccordionChange = (product) => (event, isExpanded) => {
   }
 };
 
-const handleInputChange = (productId, field, value) => {
+const handleInputChange = (product, field, value) => {
+  const productId = product.id;
+  console.warn({[field]: value});
     setProductFields((prev) => ({
       ...prev,
       [productId]: {
@@ -490,8 +492,32 @@ const handleInputChange = (productId, field, value) => {
         [field]: value,
       },
     };
-  
-    // Check if productFields[productId] exists before accessing its properties
+    
+    setProducts((prevProducts) =>
+      prevProducts.map((product) => {
+        if (product.id === productId) {
+          return { ...product, [field]: value };
+        }
+        return product;
+      })
+    );
+
+    // setFilteredProducts((prevProducts) =>
+    //   prevProducts.map((product) => {
+    //     if (product.id === productId) {
+    //       return { ...product,  [field]: value };
+    //     }
+    //     return product;
+    //   })
+    // );
+    // const updatedProduct = products.find((product) => product.id === productId);
+
+    // if(updatedProduct){
+    //   handleDateChange(updatedProduct, selectedDate);
+    //   setAvailabilityObject(updatedProduct.availability);
+    //   setSelectedProduct(updatedProduct);
+    // }
+    // // Check if productFields[productId] exists before accessing its properties
     if (productFields[productId]) {
       const startTime = field === "firstBlockTime"
         ? value
@@ -509,9 +535,6 @@ const handleInputChange = (productId, field, value) => {
           ? updatedFields[productId]?.buffer
           : "0";
   
-      console.log("Field:", field);
-      console.warn(productId, startTime, bookingDuration, bufferTime);
-  
       if (field === "firstBlockTime" || field === "durationInput" || field === "buffer") {
         if (startTime !== "" && bookingDuration !== "" && bufferTime !== "") {
           calculateBookingSlots(productId, startTime, parseInt(bookingDuration), parseInt(bufferTime));
@@ -519,11 +542,14 @@ const handleInputChange = (productId, field, value) => {
           console.warn("One or more fields are empty. Calculation skipped.");
         }
       }
+     
     } else {
       console.warn(`productId ${productId} not found in productFields.`);
     }
+    console.warn(selectedProduct);
   };
  const dateUpdateFunction = date => {
+  console.warn(selectedProduct);
     setSelectedDate(date);
     handleDateChange(selectedProduct, date);
   }
@@ -608,7 +634,7 @@ const handleInputChange = (productId, field, value) => {
                       select
                       label="Duration Type"
                       value={productFields[product.id]?.durationType || ""}
-                      onChange={(e) => handleInputChange(product.id, "durationType", e.target.value)}
+                      onChange={(e) => handleInputChange(product, "durationType", e.target.value)}
                       fullWidth
                       margin="normal"
                       disabled
@@ -622,7 +648,7 @@ const handleInputChange = (productId, field, value) => {
                       select
                       label="Duration Unit"
                       value={productFields[product.id]?.durationUnit || ""}
-                    onChange={(e) => handleInputChange(product.id, "durationUnit", e.target.value)}
+                    onChange={(e) => handleInputChange(product, "durationUnit", e.target.value)}
                       fullWidth
                       margin="normal"
                       disabled
@@ -639,22 +665,24 @@ const handleInputChange = (productId, field, value) => {
                       label="Duration"
                       type="number"
                       value={productFields[product.id]?.durationInput || ""}
-                    onChange={(e) => handleInputChange(product.id, "durationInput", e.target.value)}
+                    onChange={(e) => handleInputChange(product, "durationInput", e.target.value)}
                       fullWidth
                       margin="normal"
                       inputProps={{ min: 1 }}
+                      disabled
                     />
                   </Box>
-                  {productFields[product.id]?.durationUnit === 'hour' && (
+                  {productFields[product.id]?.durationUnit === 'Hour(s)' && (
                     <Box display="flex" gap={2} mt={2}>
                       <TextField
                           label="First Block Time"
                           type="time"
                           value={productFields[product.id]?.firstBlockTime || ""}
-                          onChange={(e) => handleInputChange(product.id, "firstBlockTime", e.target.value)}
+                          onChange={(e) => handleInputChange(product, "firstBlockTime", e.target.value)}
                           fullWidth
                           margin="normal"
                           InputLabelProps={{ shrink: true }}
+                          disabled
                         />
                         <TextField
                         label="Buffer"
@@ -662,8 +690,9 @@ const handleInputChange = (productId, field, value) => {
                         fullWidth
                         margin="normal"
                         value={productFields[product.id]?.buffer || ""}
-                        onChange={(e) => handleInputChange(product.id, "buffer", e.target.value)}
+                        onChange={(e) => handleInputChange(product, "buffer", e.target.value)}
                         inputProps={{ min: 1 }}
+                        disabled
                       />
                       </Box>
                   )}

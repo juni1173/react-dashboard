@@ -13,7 +13,7 @@ function Footer() {
     <Grid container direction="column" alignItems="center">
       <Grid item xs={12}>
         <Typography color="textSecondary" style={{padding: '16px'}}>
-          {new Date().getFullYear()} - ReactJS-PHP Login System | Developed by <Link href="https://github.com/stutzerik">Erik Stütz</Link>
+          {new Date().getFullYear()} - Woocommerce Api's Booking System | Developed by <Link href="#">Junaid</Link>
         </Typography>
       </Grid>
       </Grid>
