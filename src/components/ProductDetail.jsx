@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Container, Typography, CircularProgress, Card, CardMedia, CardContent, Grid, Button, Alert, List, ListItem } from "@mui/material";
+import { Container, Typography, CircularProgress, Card, CardMedia, Grid, Button, Alert, List, ListItem } from "@mui/material";
 import axios from "axios";
 
 function ProductDetail() {

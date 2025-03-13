@@ -49,6 +49,7 @@ function Register() {
   };
 
   const handleSubmit = (event) => {
+    return false;
     event.preventDefault();
 
     axios
