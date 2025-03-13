@@ -337,7 +337,7 @@ function List() {
   }
  const handleUpdate = async () => {
     const product = productFields[selectedProduct.id];
-    console.warn(createAvailabilityDateObject(dateAvailability).availability);
+
     // return false;
     if (!selectedProduct) return;
     setSlotLoading(true);
@@ -368,8 +368,7 @@ function List() {
           duration_type: product?.durationType,
           duration_unit: product?.durationUnit?.toLowerCase().replace("(s)", ""),
           duration: product?.durationInput,
-           availability: !dateAvailability ? createAvailabilityDateObject(dateAvailability).availability : createAvailabilitySlotObject(product?.durationArray).availability,
-          availability:  createAvailabilitySlotObject(product?.durationArray).availability,
+          availability: product?.durationUnit?.toLowerCase().replace("(s)", "") === 'day' ? (!dateAvailability ? createAvailabilityDateObject(dateAvailability).availability : []) : createAvailabilitySlotObject(product?.durationArray).availability,
         },
         {
           auth: {
@@ -450,8 +449,14 @@ const durationUnitMap = {
 };
 const handleDateChange = (product, date) => {
   const availabilityObj = product.availability;
-  console.warn(product)
-  updateDurationArray(product.id, updateDurationArrayAvailability(calculateBookingSlots(product.id, product.first_block_time, product.duration, product.buffer_period), availabilityObj, date));
+  if (product.duration_unit === 'day') {
+    return availabilityObj.map((item) => {
+      (item.from_date === date && item.to_date === date && item.from === '00:00' && item.to === '24:00') ? (item.bookable === 'no' ? setDateAvailability(false) : setDateAvailability(true)) : setDateAvailability(true);
+    });
+  } else {
+    updateDurationArray(product.id, updateDurationArrayAvailability(calculateBookingSlots(product.id, product.first_block_time, product.duration, product.buffer_period), availabilityObj, date));
+  }
+  
 }
 const handleAccordionChange = (product) => (event, isExpanded) => {
     setSelectedProduct(product);
@@ -476,7 +481,6 @@ const handleAccordionChange = (product) => (event, isExpanded) => {
 
 const handleInputChange = (product, field, value) => {
   const productId = product.id;
-  console.warn({[field]: value});
     setProductFields((prev) => ({
       ...prev,
       [productId]: {
@@ -546,10 +550,9 @@ const handleInputChange = (product, field, value) => {
     } else {
       console.warn(`productId ${productId} not found in productFields.`);
     }
-    console.warn(selectedProduct);
+    
   };
  const dateUpdateFunction = date => {
-  console.warn(selectedProduct);
     setSelectedDate(date);
     handleDateChange(selectedProduct, date);
   }
