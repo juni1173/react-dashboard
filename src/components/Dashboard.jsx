@@ -1,9 +1,11 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Container, Switch, Box, Grid, Typography, Button, CircularProgress, Accordion, AccordionSummary, AccordionDetails, Paper, TextField, MenuItem, Card, FormControlLabel, Checkbox  } from "@mui/material";
+import { useToast } from './Toast/useToast'; // Adjust the path
+import { Container, Switch, Box, Grid, Typography, Button, CircularProgress, Accordion, AccordionSummary, AccordionDetails, Paper, TextField, MenuItem, Card, FormControlLabel, Warning  } from "@mui/material";
 import axios from "axios";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import WarningIcon from '@mui/icons-material/Warning';
 import { LocalizationProvider, StaticDatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from 'dayjs';
@@ -14,6 +16,7 @@ function List() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [searchTitle, setSearchTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(dayjs(new Date()).format('YYYY-MM-DD'));
   const [slotLoading, setSlotLoading] = useState(false);
@@ -24,11 +27,6 @@ function List() {
     dayCruise: false,
     sunsetCruise: false,
   });
-//   const [minBlock, setMinBlock] = useState(0);
-//   const [minBlockUnit, setMinBlockUnit] = useState("Day(s)");
-//   const [maxBlock, setMaxBlock] = useState(0);
-//   const [maxBlockUnit, setMaxBlockUnit] = useState("Month(s)");
-//   const [availability, setAvailability] = useState("available");
   const [minPersons, setMinPersons] = useState(1);
   const [maxPersons, setMaxPersons] = useState(1);
   const [selectedCruise, setSelectedCruise] = useState("");
@@ -37,6 +35,9 @@ function List() {
   const [productFields, setProductFields] = useState({});
    const [dateAvailability, setDateAvailability] = useState(true);
   const [availabilityObject, setAvailabilityObject] = useState([]);
+  const [updateDetected, setUpdateDetected] = useState(false);
+  
+  const { showToast, Toast } = useToast();
 
   const shouldDisableDate = (date) => {
     return date.isBefore(dayjs().startOf('day'), 'day'); // Disable dates before today
@@ -61,28 +62,6 @@ function List() {
         }
         return updatedProductFields;
       });
-    // let availabilityArray = [];
-  
-    // if (slotDuration && Array.isArray(slotDuration)) {
-    //   slotDuration.forEach((slot) => {
-    //     const [fromTime, toTime] = slot.split(' - ');
-    //     if (fromTime && toTime) {
-    //       availabilityArray.push({
-    //         type: 'custom',
-    //         bookable: status ? 'yes' : 'no',
-    //         priority: 10,
-    //         from: fromTime,
-    //         to: toTime,
-    //         date: date, // Add date to each object
-    //       });
-    //     }
-    //   });
-    // }
-  
-    // const duration = { availability: availabilityArray };
-    // setSlotAvailable(status);
-    // setSlotObject(duration);
-    // console.warn(duration);
   };
   const handleToggle = (event) => {
     setDateAvailability(event.target.checked);
@@ -139,6 +118,7 @@ function List() {
             password: "cs_bd55fa6bc205f402e50fdc25876032bb9c45b2ba",
           },
         });
+        console.warn(response.data);
         const vessels = response.data.filter((category) => category.acf.category_type === "Vessel");
         const cruises = response.data.filter((category) => category.acf.category_type === "Cruise");
         setCategories({cruises, vessels});
@@ -294,6 +274,7 @@ function List() {
     // }
   
     const newAvailability = durationArray
+    
       // .filter((slot) => !slot.availability)
       .map((slot) => ({
         type: 'custom:daterange',
@@ -304,7 +285,8 @@ function List() {
         from_date: selectedDate,
         to_date: selectedDate,
       }));
-  
+      const product = productFields[selectedProduct.id];
+      const prevProductValues = products.filter((product) => product.id === selectedProduct.id)[0];
     if (!availabilityObject) {
       return { availability: newAvailability };
     }
@@ -332,15 +314,21 @@ function List() {
             existingItem.from_date === newItem.from_date
         )
     );
-  
+          if (prevProductValues.buffer_period !== product.buffer || prevProductValues.duration !== product.durationInput
+            || prevProductValues.first_block_time !== product.firstBlockTime) {
+              return { availability: [...itemsToAdd] }
+            }
     return { availability: [...updatedAvailability, ...itemsToAdd] };
   }
- const handleUpdate = async () => {
+  
+  const handleUpdate = async () => {
     const product = productFields[selectedProduct.id];
-
-    // return false;
+    const prevProductValues = products.filter((product) => product.id === selectedProduct.id)[0];
     if (!selectedProduct) return;
+    console.warn(createAvailabilitySlotObject(product?.durationArray).availability);
+  
     setSlotLoading(true);
+    
     try {
       const response = await axios.put(
         `https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc-bookings/v1/products/${selectedProduct.id}`,
@@ -358,6 +346,7 @@ function List() {
             },
           ],
           first_block_time: product?.firstBlockTime,
+          buffer_period: product?.buffer,
         //   min_block: minBlock,
         //   min_block_unit: minBlockUnit.toLowerCase().replace("(s)", ""),
         //   max_block: maxBlock,
@@ -411,19 +400,34 @@ function List() {
        handleDateChange(updatedData, selectedDate);
        setAvailabilityObject(updatedData.availability);
       setSelectedProduct(updatedData);
+      if (product?.durationUnit?.toLowerCase().replace("(s)", "") === 'day') {
+        showToast('Day availability status updated successfully!', 'success');
+      }
+      if ((prevProductValues.buffer_period !== product.buffer || prevProductValues.duration !== product.durationInput
+        || prevProductValues.first_block_time !== product.firstBlockTime) && updateDetected) {
+          setUpdateDetected(false);
+          showToast('New slots updated successfully!', 'success');
+        } else {
+          showToast('Product slots status updated successfully!', 'success');
+        }
+      
     } catch (error) {
       console.error("Update failed", error.response ? error.response.data : error);
     }
 
     setSlotLoading(false);
   };
+ 
 
-const filterProducts = (cruiseId, vesselId) => {
+const filterProducts = (cruiseId, vesselId, title) => {
   let filtered = products.filter((product) => {
     const categoryIds = product.categories.map((cat) => cat.id);
     const matchesCruise = cruiseId ? categoryIds.includes(parseInt(cruiseId)) : true;
     const matchesVessel = vesselId ? categoryIds.includes(parseInt(vesselId)) : true;
-    return matchesCruise && matchesVessel;
+    const matchesTitle = title
+      ? product.name.toLowerCase().includes(title.toLowerCase())
+      : true;
+    return matchesCruise && matchesVessel && matchesTitle;
   });
   setFilteredProducts(filtered);
 };
@@ -432,14 +436,19 @@ const filterProducts = (cruiseId, vesselId) => {
 const handleCruiseChange = (event) => {
   const cruiseId = event.target.value;
   setSelectedCruise(cruiseId);
-  filterProducts(cruiseId, selectedVessel || null);
+  filterProducts(cruiseId, selectedVessel || null, searchTitle);
 };
 
 // Handle change for vessel dropdown
 const handleVesselChange = (event) => {
   const vesselId = event.target.value;
   setSelectedVessel(vesselId);
-  filterProducts(selectedCruise || null, vesselId);
+  filterProducts(selectedCruise || null, vesselId, searchTitle);
+};
+const handleTitleChange = (event) => {
+  const title = event.target.value;
+  setSearchTitle(title);
+  filterProducts(selectedCruise, selectedVessel, title);
 };
 const durationUnitMap = {
   month: "Month(s)",
@@ -481,6 +490,28 @@ const handleAccordionChange = (product) => (event, isExpanded) => {
 
 const handleInputChange = (product, field, value) => {
   const productId = product.id;
+  let updateStatus = true;
+  const prevProductData = products.filter((pro) => pro.id === productId)[0];
+  if (field === "firstBlockTime" || field === "durationInput" || field === "buffer") {
+    if (field === "buffer" && prevProductData.buffer_period === Number(value) &&
+    prevProductData.duration === Number(productFields[productId].durationInput) &&
+    prevProductData.first_block_time === productFields[productId].firstBlockTime
+     ) {
+      updateStatus = false;
+    }
+    if (field === "durationInput" && prevProductData.buffer_period === Number(productFields[productId].buffer) &&
+    prevProductData.duration === Number(value) &&
+    prevProductData.first_block_time === productFields[productId].firstBlockTime) {
+      updateStatus = false;
+    }
+    if (field === "firstBlockTime" && prevProductData.buffer_period === Number(productFields[productId].buffer) &&
+    prevProductData.duration === Number(productFields[productId].durationInput) &&
+    prevProductData.first_block_time === value) {
+
+      updateStatus = false;
+    }
+  }
+  setUpdateDetected(updateStatus);
     setProductFields((prev) => ({
       ...prev,
       [productId]: {
@@ -497,31 +528,6 @@ const handleInputChange = (product, field, value) => {
       },
     };
     
-    setProducts((prevProducts) =>
-      prevProducts.map((product) => {
-        if (product.id === productId) {
-          return { ...product, [field]: value };
-        }
-        return product;
-      })
-    );
-
-    // setFilteredProducts((prevProducts) =>
-    //   prevProducts.map((product) => {
-    //     if (product.id === productId) {
-    //       return { ...product,  [field]: value };
-    //     }
-    //     return product;
-    //   })
-    // );
-    // const updatedProduct = products.find((product) => product.id === productId);
-
-    // if(updatedProduct){
-    //   handleDateChange(updatedProduct, selectedDate);
-    //   setAvailabilityObject(updatedProduct.availability);
-    //   setSelectedProduct(updatedProduct);
-    // }
-    // // Check if productFields[productId] exists before accessing its properties
     if (productFields[productId]) {
       const startTime = field === "firstBlockTime"
         ? value
@@ -540,6 +546,7 @@ const handleInputChange = (product, field, value) => {
           : "0";
   
       if (field === "firstBlockTime" || field === "durationInput" || field === "buffer") {
+        
         if (startTime !== "" && bookingDuration !== "" && bufferTime !== "") {
           calculateBookingSlots(productId, startTime, parseInt(bookingDuration), parseInt(bufferTime));
         } else {
@@ -556,6 +563,7 @@ const handleInputChange = (product, field, value) => {
     setSelectedDate(date);
     handleDateChange(selectedProduct, date);
   }
+  
   return (
     <ThemeProvider theme={darkTheme}>
       <Container mb={4}>
@@ -577,6 +585,9 @@ const handleInputChange = (product, field, value) => {
                 fullWidth
                 margin="normal"
               >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
                 {categories.cruises.length > 0 ? (
                   categories.cruises.map((cruise) => (
                     <MenuItem key={cruise.id} value={cruise.id}>
@@ -597,6 +608,9 @@ const handleInputChange = (product, field, value) => {
                 fullWidth
                 margin="normal"
               >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
                 {categories.vessels.length > 0 ? (
                   categories.vessels.map((vessel) => (
                     <MenuItem key={vessel.id} value={vessel.id}>
@@ -607,9 +621,17 @@ const handleInputChange = (product, field, value) => {
                   <MenuItem disabled>No Vessels Available</MenuItem>
                 )}
               </TextField>
+              <TextField
+                  label="Search by Title"
+                  value={searchTitle}
+                  onChange={handleTitleChange}
+                  fullWidth
+                  margin="normal"
+                />
               </Box>
               </Card>
               <Box>
+                
       {filteredProducts.map((product) => (
         <Accordion style={{marginTop: "5px", marginBottom: "5px"}} key={product.id} onChange={handleAccordionChange(product)}>
           {/* Tab Header (Expandable Section) */}
@@ -672,7 +694,7 @@ const handleInputChange = (product, field, value) => {
                       fullWidth
                       margin="normal"
                       inputProps={{ min: 1 }}
-                      disabled
+                      disabled={productFields[product.id]?.durationUnit?.toLowerCase().replace("(s)", "") === 'day'}
                     />
                   </Box>
                   {productFields[product.id]?.durationUnit === 'Hour(s)' && (
@@ -685,18 +707,27 @@ const handleInputChange = (product, field, value) => {
                           fullWidth
                           margin="normal"
                           InputLabelProps={{ shrink: true }}
-                          disabled
+                          
                         />
-                        <TextField
-                        label="Buffer"
-                        type="number"
-                        fullWidth
-                        margin="normal"
-                        value={productFields[product.id]?.buffer || ""}
-                        onChange={(e) => handleInputChange(product, "buffer", e.target.value)}
-                        inputProps={{ min: 1 }}
-                        disabled
-                      />
+                       <TextField
+                          label="Buffer"
+                          type="number"
+                          fullWidth
+                          margin="normal"
+                          value={productFields[product.id]?.buffer || ""}
+                          onChange={(e) => handleInputChange(product, "buffer", e.target.value)}
+                          inputProps={{ min: 1 }}
+                          sx={{
+                            '& input[type=number]::-webkit-inner-spin-button, & input[type=number]::-webkit-outer-spin-button':
+                              {
+                                '-webkit-appearance': 'none',
+                                margin: 0,
+                              },
+                            '& input[type=number]': {
+                              '-moz-appearance': 'textfield',
+                            },
+                          }}
+                        />
                       </Box>
                   )}
                       
@@ -711,13 +742,23 @@ const handleInputChange = (product, field, value) => {
                         shouldDisableDate={shouldDisableDate}
                         />
                     </LocalizationProvider>
+                  
                 </Card>
                 </Box>
                 <Box display="flex" flexDirection="row" justify-content="center" alignItems="center"  gap={2} flexWrap="wrap" mt={2}>
                  {slotLoading ? (
                     <CircularProgress />
                   ) : (
-                    productFields[product.id]?.durationArray?.map((slot, index) => (
+                    updateDetected ? (
+                      <Box display="flex" alignItems="center" color="error.main">
+                        <WarningIcon sx={{ mr: 1 }} />
+                        <Typography>
+                          Duration, Start Time or Buffer change detected click update button to delete previous slots and generate new
+                          slots...
+                        </Typography>
+                      </Box>
+                    ) : (
+                      productFields[product.id]?.durationArray?.map((slot, index) => (
                         <Card key={index} sx={{ p: 2, minWidth: 300, maxHeight: 30, textAlign: 'center', position: 'relative' }}>
                         <Box sx={{ position: 'absolute', top: 5, right: 5 }}>
                             {(slot !== "Slot required Start Time" || slot !== "Slot required Booking Duration" || slot !== "Slot required Buffer Time") && (
@@ -737,6 +778,8 @@ const handleInputChange = (product, field, value) => {
                         <Typography style={{ marginTop: "20px", fontSize: 'larger', letterSpacing:'2px', fontWeight:'700' }} variant="body1">{slot.duration}</Typography>
                       </Card>
                     ))
+                    )
+                    
                   )}
                   {product.duration_unit === 'day' && (
                     <>
@@ -751,7 +794,7 @@ const handleInputChange = (product, field, value) => {
                           />
                       </>
                   )}
-                  
+                  <Toast />
                 </Box>
                 
                 <Grid container spacing={1}>
