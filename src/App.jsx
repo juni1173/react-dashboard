@@ -7,6 +7,7 @@ import Register from './components/Register';
 import Login from './components/Login';
 import Logout from './components/Logout';
 import Dashboard from './components/Dashboard';
+import Reservation from './components/Reservation/index';
 import ProductDetail from "./components/ProductDetail";
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/logout" element={<Logout />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/reservations" element={<Reservation />} />
             <Route path="/product/:id" element={<ProductDetail />} />
           </Routes>
         </BrowserRouter>

@@ -96,8 +96,8 @@ function List() {
       // const response = await axios.get("https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc/v3/products?per_page=50", {
       const response = await axios.get("https://cretaluxurycruises.dev6.inglelandi.com//wp-json/wc-bookings/v1/products?per_page=50", {
         auth: {
-          username: "ck_cb8d0d61726f318ddc43be3407749e7a58360fe1",
-          password: "cs_bd55fa6bc205f402e50fdc25876032bb9c45b2ba",
+          username: "ck_1f464ec8689a73082203c109dcad8e6e1a691631",
+          password: "cs_3072b928305675012278342ea5b99412646153a6",
         },
       });
       const activeProducts = response.data.filter((product) => product.status === "publish");
@@ -114,8 +114,8 @@ function List() {
         // const response = await axios.get("https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc/v3/products?per_page=50", {
         const response = await axios.get("https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc-bookings/v1/products/categories?per_page=20", {
           auth: {
-            username: "ck_cb8d0d61726f318ddc43be3407749e7a58360fe1",
-            password: "cs_bd55fa6bc205f402e50fdc25876032bb9c45b2ba",
+            username: "ck_1f464ec8689a73082203c109dcad8e6e1a691631",
+            password: "cs_3072b928305675012278342ea5b99412646153a6",
           },
         });
         console.warn(response.data);
@@ -361,8 +361,8 @@ function List() {
         },
         {
           auth: {
-            username: "ck_cb8d0d61726f318ddc43be3407749e7a58360fe1",
-            password: "cs_bd55fa6bc205f402e50fdc25876032bb9c45b2ba",
+            username: "ck_1f464ec8689a73082203c109dcad8e6e1a691631",
+            password: "cs_3072b928305675012278342ea5b99412646153a6",
           },
         }
       );
@@ -571,7 +571,7 @@ const handleInputChange = (product, field, value) => {
           <Grid item xs={12} sm={12} md={12}>
           <Header />
             {loading ? (
-              <CircularProgress />
+              <div style={{textAlign: "center"}}><CircularProgress /></div> 
             ) : (
               <>
               {/* Dropdown for Cruises */}

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import Box from "@mui/material/Box";
+import {CircularProgress} from "@mui/material";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
@@ -15,7 +16,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
+  const [loading, setLoading] = useState(false);
   const handleEmailChange = (event) => {
     setEmail(event.target.value);
   };
@@ -30,13 +31,13 @@ function Login() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    setLoading(true);
     axios
       .post("https://blogpepper.com/backend/api/login.php", {
         email: email,
         password: password,
       })
       .then((response) => {
-        console.log(response);
         if (response.data.status === "success") {
           sessionStorage.setItem("loggedIn", true);
           sessionStorage.setItem(
@@ -47,10 +48,12 @@ function Login() {
           window.location.href = "/dashboard";
         } else {
           setError(response.data.message);
+          setLoading(false);
         }
       })
       .catch((error) => {
         console.error(error);
+        setLoading(false);
       });
   };
 
@@ -104,9 +107,14 @@ function Login() {
               ),
             }}
           />
-          <Button variant="contained" type="submit">
-            Login
-          </Button>
+           {loading ? (
+              <div style={{textAlign: "center"}}><CircularProgress /></div> 
+            ) : (
+              <Button variant="contained" type="submit">
+                Login
+              </Button>
+            )}
+          
           {/* <p>
             Don't have an account? <Link href="/register">Sign up</Link>
           </p> */}
