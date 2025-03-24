@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography, Button, Link  } from '@mui/material';
 import logoSrc from '../assets/images/logo.png';
 import Logout from './Logout';
 function Header() {
@@ -20,9 +20,31 @@ function Header() {
       </Box>
 
       {/* Middle Column: Heading */}
-      <Box sx={{ flex: 2, textAlign: 'center', color: '#fff' }}>
-        <Typography variant="h6">Booking Management</Typography>
-      </Box>
+      <Box sx={{ flex: 2, textAlign: "center", color: "#fff", display: "flex", justifyContent: "center", gap: 4 }}>
+      {/* Dashboard Link */}
+      <Typography variant="h6">
+        <Link
+          href="/dashboard"
+          underline="none"
+          color="inherit"
+          sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+        >
+          Management
+        </Link>
+      </Typography>
+
+      {/* Reservations Link */}
+      <Typography variant="h6">
+        <Link
+          href="/reservations"
+          underline="none"
+          color="inherit"
+          sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+        >
+          Reservations
+        </Link>
+      </Typography>
+    </Box>
 
       {/* Right Column: Button */}
       <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>

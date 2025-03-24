@@ -7,6 +7,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from 'dayjs';
 import WarningIcon from '@mui/icons-material/Warning';
 import axios from 'axios';
+import Header from "../header";
 const Index = () => {
     const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
     const [ordersData, setOrdersData] = useState([]);
@@ -98,6 +99,7 @@ const Index = () => {
     return (
         <ThemeProvider theme={darkTheme}>
             <Container>
+            <Header />
                 <Box>
                     <Card>
                         <LocalizationProvider dateAdapter={AdapterDayjs}>
