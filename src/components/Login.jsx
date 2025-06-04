@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import Box from "@mui/material/Box";
-import {CircularProgress} from "@mui/material";
+import { CircularProgress } from "@mui/material";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
@@ -107,14 +107,16 @@ function Login() {
               ),
             }}
           />
-           {loading ? (
-              <div style={{textAlign: "center"}}><CircularProgress /></div> 
-            ) : (
-              <Button variant="contained" type="submit">
-                Login
-              </Button>
-            )}
-          
+          {loading ? (
+            <div style={{ textAlign: "center" }}>
+              <CircularProgress />
+            </div>
+          ) : (
+            <Button variant="contained" type="submit">
+              Login
+            </Button>
+          )}
+
           {/* <p>
             Don't have an account? <Link href="/register">Sign up</Link>
           </p> */}
@@ -125,5 +127,3 @@ function Login() {
 }
 
 export default Login;
-
-
