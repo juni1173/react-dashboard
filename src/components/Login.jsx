@@ -45,7 +45,7 @@ function Login() {
             JSON.stringify(response.data.data)
           );
 
-          window.location.href = "/dashboard";
+          window.location.href = "/portal-app/dashboard";
         } else {
           setError(response.data.message);
           setLoading(false);

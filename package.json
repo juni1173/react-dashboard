@@ -2,6 +2,7 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "homepage": "/portal-app",
   "dependencies": {
     "@date-io/dayjs": "^2.2.0",
     "@emotion/react": "^11.10.8",

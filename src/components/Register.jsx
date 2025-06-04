@@ -148,7 +148,7 @@ function Register() {
             gutterBottom
             style={{ marginTop: "20px" }}
           >
-            Do You have an account? <Link href="/login">Sign in</Link>
+            Do You have an account? <Link href="/portal-app/login">Sign in</Link>
           </Typography>
         </form>
       </Container>

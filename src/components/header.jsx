@@ -24,7 +24,7 @@ function Header() {
       {/* Dashboard Link */}
       <Typography variant="h6">
         <Link
-          href="/dashboard"
+          href="/portal-app/dashboard"
           underline="none"
           color="inherit"
           sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
@@ -36,7 +36,7 @@ function Header() {
       {/* Reservations Link */}
       <Typography variant="h6">
         <Link
-          href="/reservations"
+          href="/portal-app/reservations"
           underline="none"
           color="inherit"
           sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}

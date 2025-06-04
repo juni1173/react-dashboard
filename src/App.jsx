@@ -13,7 +13,7 @@ import ProductDetail from "./components/ProductDetail";
 function App() {
   return (
     <div>
-        <BrowserRouter>
+        <BrowserRouter basename="/portal-app">
           <Routes>
             <Route index element={<Login />} />
             <Route path="/login" element={<Login />} />
