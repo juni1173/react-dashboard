@@ -1,63 +1,59 @@
-import React from "react";
-import { Box, Typography, Button, Link } from "@mui/material";
-import logoSrc from "../assets/images/logo.png";
-import Logout from "./Logout";
+import React from 'react';
+import { Box, Typography, Button, useMediaQuery } from '@mui/material';
+import { Link } from 'react-router-dom';
+import logoSrc from '../assets/images/logo.png';
+import Logout from './Logout';
+
 function Header() {
-  const isMobile = window.innerWidth <= 768;
+  const isSmallScreen = useMediaQuery('(max-width: 768px)'); // Adjust breakpoint as needed
+
   return (
     <Box
       sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexDirection: isMobile ? "column" : "row",
-
-        padding: "16px",
-        marginBottom: "5px",
-        backgroundColor: "#121212", // Example background color
+        display: 'flex',
+        flexDirection: isSmallScreen ? 'column' : 'row', // Stack on small screens
+        alignItems: isSmallScreen ? 'flex-start' : 'center',
+        justifyContent: 'space-between',
+        padding: '16px',
+        marginBottom: '5px',
+        backgroundColor: '#121212',
       }}
     >
       {/* Left Column: Logo */}
-      <Box sx={{ flex: 1, display: "flex", alignItems: "center" }}>
-        <img src={logoSrc} alt="Logo" style={{ maxHeight: "40px" }} />
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+        <img src={logoSrc} alt="Logo" style={{ maxHeight: '40px' }} />
       </Box>
 
       {/* Middle Column: Heading */}
       <Box
         sx={{
-          flex: 2,
-          textAlign: "center",
-          color: "#fff",
-          display: "flex",
-          justifyContent: "center",
-          gap: 4,
+          flex: isSmallScreen ? 1 : 2, // Adjust flex based on screen size
+          textAlign: isSmallScreen ? 'left' : 'center',
+          color: '#fff',
+          display: 'flex',
+          flexDirection: isSmallScreen ? 'column' : 'row',
+          justifyContent: isSmallScreen ? 'flex-start' : 'center',
+          gap: isSmallScreen ? 1 : 4,
+          mt: isSmallScreen ? 2 : 0, // Add top margin on small screens
         }}
       >
-        {/* Dashboard Link */}
         <Typography variant="h6">
           <Link
-            href="/portal-app/dashboard"
+            to="/en/dashboard"
             underline="none"
             color="inherit"
-            sx={{
-              cursor: "pointer",
-              "&:hover": { textDecoration: "underline" },
-            }}
+            sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
           >
             Management
           </Link>
         </Typography>
 
-        {/* Reservations Link */}
         <Typography variant="h6">
           <Link
-            href="/portal-app/reservations"
+            to="/en/reservations"
             underline="none"
             color="inherit"
-            sx={{
-              cursor: "pointer",
-              "&:hover": { textDecoration: "underline" },
-            }}
+            sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
           >
             Reservations
           </Link>
@@ -68,17 +64,13 @@ function Header() {
       <Box
         sx={{
           flex: 1,
-          display: "flex",
-          justifyContent: "flex-end",
-          alignItems: "center",
+          display: 'flex',
+          justifyContent: isSmallScreen ? 'flex-start' : 'flex-end',
+          alignItems: 'center',
+          mt: isSmallScreen ? 2 : 0, // Add top margin on small screens
         }}
       >
-        <Button
-          onClick={Logout}
-          sx={{ backgroundColor: "red", color: "white" }}
-        >
-          Logout
-        </Button>
+        <Logout />
       </Box>
     </Box>
   );

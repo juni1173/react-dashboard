@@ -49,11 +49,10 @@ function Register() {
   };
 
   const handleSubmit = (event) => {
-    return false;
     event.preventDefault();
 
     axios
-      .post("https://blogpepper.com/backend/api/register.php", {
+      .post("https://cretaluxurycruises.gr/authentication/backend/api/register.php", {
         username: username,
         email: email,
         password: password,
@@ -148,7 +147,7 @@ function Register() {
             gutterBottom
             style={{ marginTop: "20px" }}
           >
-            Do You have an account? <Link href="/portal-app/login">Sign in</Link>
+            Do You have an account? <Link href="/login">Sign in</Link>
           </Typography>
         </form>
       </Container>

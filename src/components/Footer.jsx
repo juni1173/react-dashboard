@@ -10,7 +10,13 @@ function Footer() {
       }}
     >
     <Divider />
-   
+    <Grid container direction="column" alignItems="center">
+      <Grid item xs={12}>
+        <Typography color="textSecondary" style={{padding: '16px'}}>
+          {new Date().getFullYear()} - Woocommerce Api's Booking System | Developed by <Link href="#">Junaid</Link>
+        </Typography>
+      </Grid>
+      </Grid>
     </Box>
   );
 };

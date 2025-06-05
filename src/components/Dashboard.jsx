@@ -18,7 +18,7 @@ import {
   MenuItem,
   Card,
   FormControlLabel,
-  Warning,
+  Modal,
 } from "@mui/material";
 import axios from "axios";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
@@ -28,7 +28,6 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Header from "./header";
-import BulkUpdate from "./bulkUpdate";
 
 function List() {
   const navigate = useNavigate();
@@ -36,28 +35,48 @@ function List() {
   const [categories, setCategories] = useState([]);
   const [searchTitle, setSearchTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingMultiple, setMultipleLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
+    dayjs(new Date()).format("YYYY-MM-DD")
+  );
+  const [selectedMultipleDate, setMultipleSelectedDate] = useState(
     dayjs(new Date()).format("YYYY-MM-DD")
   );
   const [slotLoading, setSlotLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState("");
-  const [duration, setDuration] = useState("");
-  const [cruiseOptions, setCruiseOptions] = useState({
-    multipleDays: false,
-    dayCruise: false,
-    sunsetCruise: false,
-  });
+
   const [minPersons, setMinPersons] = useState(1);
   const [maxPersons, setMaxPersons] = useState(1);
   const [selectedCruise, setSelectedCruise] = useState("");
+  // const [cruise, setCruise] = useState("");
   const [selectedVessel, setSelectedVessel] = useState("");
   const [filteredProducts, setFilteredProducts] = useState(products);
   const [productFields, setProductFields] = useState({});
   const [dateAvailability, setDateAvailability] = useState(true);
+  const [dateMultipleAvailability, setMultipleDateAvailability] =
+    useState(true);
   const [availabilityObject, setAvailabilityObject] = useState([]);
   const [updateDetected, setUpdateDetected] = useState(false);
-
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
   const { showToast, Toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const handleOpen = () => {
+    setSelectedProductIds([]);
+    setOpen(true);
+  };
+  const handleClose = () => setOpen(false);
+
+  const modalStyle = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: 700,
+    bgcolor: "background.paper",
+    border: "2px solid #1976d2",
+    boxShadow: 24,
+    p: 4,
+  };
 
   const shouldDisableDate = (date) => {
     return date.isBefore(dayjs().startOf("day"), "day"); // Disable dates before today
@@ -86,6 +105,20 @@ function List() {
   const handleToggle = (event) => {
     setDateAvailability(event.target.checked);
   };
+  const handleMultipleToggle = (event) => {
+    setMultipleDateAvailability(event.target.checked);
+  };
+  const handleCardClick = (productId) => {
+    if (selectedProductIds.includes(productId)) {
+      // Remove the ID if it's already in the array
+      setSelectedProductIds(
+        selectedProductIds.filter((id) => id !== productId)
+      );
+    } else {
+      // Add the ID if it's not in the array
+      setSelectedProductIds([...selectedProductIds, productId]);
+    }
+  };
   //const userData = JSON.parse(sessionStorage.getItem("userData"));
   // const username = userData?.username;
   const darkTheme = createTheme({
@@ -111,35 +144,11 @@ function List() {
       navigate("/login");
     }
   }, [navigate]);
-  const fetchProducts = async () => {
-    try {
-      // const response = await axios.get("https://cretaluxurycruises.gr/wp-json/wc/v3/products?per_page=50", {
-      const auth = {
-        username: process.env.REACT_APP_USERNAME,
-        password: process.env.REACT_APP_PASSWORD,
-      };
-      const response = await axios.get(
-        `${process.env.React_APP_API_URL}//wp-json/wc-bookings/v1/products?per_page=50`,
-        {
-          auth,
-        }
-      );
-      console.warn(response.data);
-      const activeProducts = response.data.filter(
-        (product) => product.status === "publish"
-      );
-      setProducts(activeProducts);
-      setFilteredProducts(activeProducts);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        // const response = await axios.get("https://cretaluxurycruises.gr/wp-json/wc/v3/products?per_page=50", {
+        // const response = await axios.get("https://www.cretaluxurycruises.gr/wp-json/wc/v3/products?per_page=50", {
         const response = await axios.get(
           `${process.env.React_APP_API_URL}/wp-json/wc-bookings/v1/products/categories?per_page=20`,
           {
@@ -149,7 +158,6 @@ function List() {
             },
           }
         );
-        console.warn(response.data);
         const vessels = response.data.filter(
           (category) => category.acf.category_type === "Vessel"
         );
@@ -164,9 +172,31 @@ function List() {
         setLoading(false);
       }
     };
-
-    fetchProducts();
+    const fetchAllProducts = async () => {
+      try {
+        // const response = await axios.get("https://www.cretaluxurycruises.gr/wp-json/wc/v3/products?per_page=50", {
+        const response = await axios.get(
+          `${process.env.React_APP_API_URL}/wp-json/custom/v1/products`,
+          {
+            auth: {
+              username: process.env.REACT_APP_USERNAME,
+              password: process.env.REACT_APP_PASSWORD,
+            },
+          }
+        );
+        const products = response.data.products;
+        setProducts(products);
+        setFilteredProducts(products);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchCategories();
+    fetchAllProducts();
+    setSelectedCruise("");
+    setSelectedVessel("");
   }, []);
 
   const updateDurationArray = (productId, durations) => {
@@ -297,7 +327,9 @@ function List() {
       return { availability: [] };
     }
 
+    const prevAvailability = selectedProduct?.availability;
     const availability = [
+      ...prevAvailability,
       {
         type: "custom:daterange",
         bookable: date_availability ? "yes" : "no", // All are "no" based on your example
@@ -308,8 +340,63 @@ function List() {
         to_date: selectedDate,
       },
     ];
+    console.warn(selectedProduct?.availability);
 
     return { availability };
+  }
+  function createOtherAvailabilityDateObject(item, date) {
+    if (!date) {
+      return { availability: item?.availability || [] }; // Return existing or empty array if no date
+    }
+
+    const prevAvailability = item?.availability || [];
+    const existingDateRangeIndex = prevAvailability.findIndex(
+      (availItem) =>
+        availItem.type === "custom:daterange" &&
+        (availItem.from_date === date || availItem.to_date === date)
+    );
+
+    if (existingDateRangeIndex !== -1) {
+      // If date range exists, update bookable status
+      const updatedAvailability = prevAvailability.map((availItem, index) =>
+        index === existingDateRangeIndex
+          ? { ...availItem, bookable: dateMultipleAvailability ? "yes" : "no" }
+          : availItem
+      );
+      return { availability: updatedAvailability };
+    } else {
+      // If date range doesn't exist, create and add new object
+      const newAvailability = [
+        ...prevAvailability,
+        {
+          type: "custom:daterange",
+          bookable: dateMultipleAvailability ? "yes" : "no",
+          priority: 10,
+          from: "00:00",
+          to: "24:00",
+          from_date: date,
+          to_date: date,
+        },
+      ];
+      return { availability: newAvailability };
+    }
+  }
+  function checkDateUnavailableExist(item, date) {
+    if (!date) {
+      return false;
+    }
+    const prevAvailability = item?.availability || [];
+    const existingDateRangeIndex = prevAvailability.findIndex(
+      (availItem) =>
+        availItem.type === "custom:daterange" &&
+        (availItem.from_date === date || availItem.to_date === date)
+    );
+
+    if (existingDateRangeIndex !== -1) {
+      // If date range exists, and bookable is no return true else false
+      return prevAvailability[existingDateRangeIndex].bookable === "no";
+    }
+    return false; // If date range doesn't exist, return false
   }
   function createAvailabilitySlotObject(durationArray) {
     if (!durationArray || durationArray.length === 0) {
@@ -382,9 +469,7 @@ function List() {
       (product) => product.id === selectedProduct.id
     )[0];
     if (!selectedProduct) return;
-    console.warn(
-      createAvailabilitySlotObject(product?.durationArray).availability
-    );
+    // console.warn(createAvailabilitySlotObject(product?.durationArray).availability);
 
     setSlotLoading(true);
 
@@ -445,6 +530,7 @@ function List() {
           maxPersons: updatedData.max_persons || 0,
           buffer: updatedData.buffer_period || 0,
           durationArray: [],
+          availability: updatedData.availability,
         },
       }));
       setProducts((prevProducts) =>
@@ -490,10 +576,101 @@ function List() {
 
     setSlotLoading(false);
   };
+  const handleMultipleSubmit = async () => {
+    if (!filteredProducts || filteredProducts.length === 0) {
+      return; // No products to update
+    }
+    if (!selectedProductIds || selectedProductIds.length === 0) {
+      return; // No products to update
+    }
+    setMultipleLoading(true);
+    const getSelectedProducts = (filteredProducts, selectedProductIds) => {
+      return filteredProducts.filter((item) =>
+        selectedProductIds.includes(item.id)
+      );
+    };
 
+    // Example usage:
+
+    const selectedProducts = getSelectedProducts(
+      filteredProducts,
+      selectedProductIds
+    );
+
+    try {
+      const updatePromises = selectedProducts.map(async (item) => {
+        const response = await axios.put(
+          `${process.env.React_APP_API_URL}/wp-json/wc-bookings/v1/products/${item.id}`,
+          {
+            availability: selectedMultipleDate
+              ? createOtherAvailabilityDateObject(item, selectedMultipleDate)
+                  .availability
+              : [],
+          },
+          {
+            auth: {
+              username: process.env.REACT_APP_USERNAME,
+              password: process.env.REACT_APP_PASSWORD,
+            },
+          }
+        );
+        return response.data;
+      });
+
+      const updatedDataArray = await Promise.all(updatePromises);
+
+      updatedDataArray.forEach((updatedData) => {
+        setProductFields((prev) => ({
+          ...prev,
+          [updatedData.id]: {
+            durationType: updatedData.duration_type || "fixed",
+            durationUnit:
+              durationUnitMap[updatedData.duration_unit] || "Hour(s)",
+            durationInput: updatedData.duration || 1,
+            firstBlockTime: updatedData.first_block_time || "",
+            minPersons: updatedData.min_persons || 0,
+            maxPersons: updatedData.max_persons || 0,
+            buffer: updatedData.buffer_period || 0,
+            durationArray: [],
+            availability: updatedData.availability,
+          },
+        }));
+
+        setProducts((prevProducts) =>
+          prevProducts.map((p) => {
+            if (p.id === updatedData.id) {
+              return { ...p, ...updatedData };
+            }
+            return p;
+          })
+        );
+
+        setFilteredProducts((prevProducts) =>
+          prevProducts.map((p) => {
+            if (p.id === updatedData.id) {
+              return { ...p, ...updatedData };
+            }
+            return p;
+          })
+        );
+      });
+    } catch (error) {
+      console.error(
+        "Update failed",
+        error.response ? error.response.data : error
+      );
+      showToast("Error updating product slots.", "error");
+    }
+
+    setMultipleLoading(false);
+  };
   const filterProducts = (cruiseId, vesselId, title) => {
+    // if (cruiseId) {
+    //  setCruise(cruiseId)
+
+    // }
     let filtered = products.filter((product) => {
-      const categoryIds = product.categories.map((cat) => cat.id);
+      const categoryIds = product.categories.map((cat) => cat.term_id);
       const matchesCruise = cruiseId
         ? categoryIds.includes(parseInt(cruiseId))
         : true;
@@ -535,16 +712,16 @@ function List() {
   const handleDateChange = (product, date) => {
     const availabilityObj = product.availability;
     if (product.duration_unit === "day") {
-      return availabilityObj.map((item) => {
-        item.from_date === date &&
-        item.to_date === date &&
-        item.from === "00:00" &&
-        item.to === "24:00"
-          ? item.bookable === "no"
-            ? setDateAvailability(false)
-            : setDateAvailability(true)
-          : setDateAvailability(true);
-      });
+      const avail = availabilityObj.find(
+        (item) =>
+          item.from_date === date ||
+          (item.to_date === date && item.bookable === "no")
+      );
+      return avail ? setDateAvailability(false) : setDateAvailability(true);
+
+      // return availabilityObj.map((item) => {
+      //   (item.from_date === date && item.to_date === date && item.from === '00:00' && item.to === '24:00') ? (item.bookable === 'no' ? setDateAvailability(false) : setDateAvailability(true)) : setDateAvailability(true);
+      // });
     } else {
       updateDurationArray(
         product.id,
@@ -559,6 +736,27 @@ function List() {
           date
         )
       );
+    }
+  };
+  const handleMultipleDateChange = (date) => {
+    let allDatesMatch = true; // Assume all dates match initially
+    filteredProducts.forEach((item) => {
+      const availabilityObj = item.availability;
+      const matchingItem = availabilityObj?.find(
+        (availItem) =>
+          (availItem.from_date === date || availItem.to_date === date) &&
+          availItem.bookable === "no"
+      );
+
+      if (!matchingItem) {
+        allDatesMatch = false; // At least one item doesn't match the condition
+      }
+    });
+
+    if (allDatesMatch) {
+      setDateAvailability(false); // All items have a matching date where bookable is 'no'.
+    } else {
+      setDateAvailability(true); // At least one item doesn't have a matching date or has a matching date where bookable is not 'no'.
     }
   };
   const handleAccordionChange = (product) => (event, isExpanded) => {
@@ -685,6 +883,10 @@ function List() {
     setSelectedDate(date);
     handleDateChange(selectedProduct, date);
   };
+  const dateMultipleUpdateFunction = (date) => {
+    setMultipleSelectedDate(date);
+    handleMultipleDateChange(date);
+  };
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -718,7 +920,7 @@ function List() {
                       <MenuItem value="">
                         <em>None</em>
                       </MenuItem>
-                      {categories.cruises && categories.cruises?.length > 0 ? (
+                      {categories.cruises && categories.cruises.length > 0 ? (
                         categories.cruises.map((cruise) => (
                           <MenuItem key={cruise.id} value={cruise.id}>
                             {cruise.name}
@@ -741,7 +943,7 @@ function List() {
                       <MenuItem value="">
                         <em>None</em>
                       </MenuItem>
-                      {categories.vessels && categories.vessels?.length > 0 ? (
+                      {categories.vessels && categories.vessels.length > 0 ? (
                         categories.vessels.map((vessel) => (
                           <MenuItem key={vessel.id} value={vessel.id}>
                             {vessel.name}
@@ -760,405 +962,568 @@ function List() {
                     />
                   </Box>
                 </Card>
-                {
-                  // (selectedProduct) &&
-                  filterProducts.length > 0 && (
-                     <Button
-                              variant="contained"
-                              color="primary"
-                              onClick={() => {
-                                setSelectedProduct("");
-                                setProductFields({});
-                                setUpdateDetected(false);
-                              }}
-                              sx={{ mt: 2, mb: 2 }} 
-                            >
-                              Bulk Update
-                            </Button>
-                  )
-                }
                 <Box>
-                  {filteredProducts.map((product) => (
-                    <Accordion
-                      style={{ marginTop: "5px", marginBottom: "5px" }}
-                      key={product.id}
-                      onChange={handleAccordionChange(product)}
-                    >
-                      {/* Tab Header (Expandable Section) */}
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Box display="flex" alignItems="center" gap={2}>
-                          <img
-                            src={
-                              product.images[0]?.src ||
-                              "https://via.placeholder.com/50"
-                            }
-                            alt={product.name}
-                            width="50"
-                          />
-                          <Typography variant="h7">{product.name}</Typography>
-                          <Typography variant="body1" color="primary">
-                            {product.duration_type} - {product.duration}{" "}
-                            {product.duration_unit}
-                          </Typography>
+                  {filteredProducts && filteredProducts.length > 0 && (
+                    // productLoading ? (
+                    //   <div style={{textAlign: "center"}}><CircularProgress /></div>
+                    // ) : (
+                    <>
+                      {(selectedCruise !== "" || selectedVessel !== "") && (
+                        <Box sx={{ display: "flex", justifyContent: "center" }}>
+                          <Button onClick={() => handleOpen()}>
+                            Bulk Update
+                          </Button>
                         </Box>
-                      </AccordionSummary>
+                      )}
 
-                      {/* Tab Details (Expanded Content) */}
-                      <AccordionDetails>
-                        <Paper elevation={3} sx={{ p: 2 }}>
-                          {/* <Typography variant="body2">More details about the product can go here.</Typography> */}
-                          <Box>
-                            <Typography variant="h6" gutterBottom>
-                              Booking Duration
-                            </Typography>
-                            <Box display="flex" gap={2}>
-                              {/* Duration Type */}
-                              <TextField
-                                select
-                                label="Duration Type"
-                                value={
-                                  productFields[product.id]?.durationType || ""
+                      {filteredProducts.map((product) => (
+                        <Accordion
+                          style={{ marginTop: "5px", marginBottom: "5px" }}
+                          key={product.id}
+                          onChange={handleAccordionChange(product)}
+                        >
+                          {/* Tab Header (Expandable Section) */}
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Box display="flex" alignItems="center" gap={2}>
+                              <img
+                                src={
+                                  product.images[0]?.src ||
+                                  "https://via.placeholder.com/50"
                                 }
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    product,
-                                    "durationType",
-                                    e.target.value
-                                  )
-                                }
-                                fullWidth
-                                margin="normal"
-                                disabled
-                              >
-                                <MenuItem value="fixed">Fixed</MenuItem>
-                                <MenuItem value="flexible">Flexible</MenuItem>
-                              </TextField>
-
-                              {/* Duration Unit */}
-                              <TextField
-                                select
-                                label="Duration Unit"
-                                value={
-                                  productFields[product.id]?.durationUnit || ""
-                                }
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    product,
-                                    "durationUnit",
-                                    e.target.value
-                                  )
-                                }
-                                fullWidth
-                                margin="normal"
-                                disabled
-                              >
-                                {[
-                                  "Month(s)",
-                                  "Day(s)",
-                                  "Hour(s)",
-                                  "Minute(s)",
-                                ].map((unit) => (
-                                  <MenuItem key={unit} value={unit}>
-                                    {unit}
-                                  </MenuItem>
-                                ))}
-                              </TextField>
-
-                              {/* Duration */}
-                              <TextField
-                                label="Duration"
-                                type="number"
-                                value={
-                                  productFields[product.id]?.durationInput || ""
-                                }
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    product,
-                                    "durationInput",
-                                    e.target.value
-                                  )
-                                }
-                                fullWidth
-                                margin="normal"
-                                inputProps={{ min: 1 }}
-                                disabled={
-                                  productFields[product.id]?.durationUnit
-                                    ?.toLowerCase()
-                                    .replace("(s)", "") === "day"
-                                }
+                                alt={product.name}
+                                width="50"
                               />
+                              <Typography variant="h7">
+                                {product.name}
+                              </Typography>
+                              <Typography variant="body1" color="primary">
+                                {product.duration_type} - {product.duration}{" "}
+                                {product.duration_unit}
+                              </Typography>
                             </Box>
-                            {productFields[product.id]?.durationUnit ===
-                              "Hour(s)" && (
-                              <Box display="flex" gap={2} mt={2}>
-                                <TextField
-                                  label="First Block Time"
-                                  type="time"
-                                  value={
-                                    productFields[product.id]?.firstBlockTime ||
-                                    ""
-                                  }
-                                  onChange={(e) =>
-                                    handleInputChange(
-                                      product,
-                                      "firstBlockTime",
-                                      e.target.value
-                                    )
-                                  }
-                                  fullWidth
-                                  margin="normal"
-                                  InputLabelProps={{ shrink: true }}
-                                />
-                                <TextField
-                                  label="Buffer"
-                                  type="number"
-                                  fullWidth
-                                  margin="normal"
-                                  value={
-                                    productFields[product.id]?.buffer || ""
-                                  }
-                                  onChange={(e) =>
-                                    handleInputChange(
-                                      product,
-                                      "buffer",
-                                      e.target.value
-                                    )
-                                  }
-                                  inputProps={{ min: 1 }}
-                                  sx={{
-                                    "& input[type=number]::-webkit-inner-spin-button, & input[type=number]::-webkit-outer-spin-button":
-                                      {
-                                        "-webkit-appearance": "none",
-                                        margin: 0,
-                                      },
-                                    "& input[type=number]": {
-                                      "-moz-appearance": "textfield",
-                                    },
-                                  }}
-                                />
+                          </AccordionSummary>
+
+                          {/* Tab Details (Expanded Content) */}
+                          <AccordionDetails>
+                            <Paper elevation={3} sx={{ p: 2 }}>
+                              {/* <Typography variant="body2">More details about the product can go here.</Typography> */}
+                              <Box>
+                                <Typography variant="h6" gutterBottom>
+                                  Booking Duration
+                                </Typography>
+                                <Box display="flex" gap={2}>
+                                  {/* Duration Type */}
+                                  <TextField
+                                    select
+                                    label="Duration Type"
+                                    value={
+                                      productFields[product.id]?.durationType ||
+                                      ""
+                                    }
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        product,
+                                        "durationType",
+                                        e.target.value
+                                      )
+                                    }
+                                    fullWidth
+                                    margin="normal"
+                                    disabled
+                                  >
+                                    <MenuItem value="fixed">Fixed</MenuItem>
+                                    <MenuItem value="flexible">
+                                      Flexible
+                                    </MenuItem>
+                                  </TextField>
+
+                                  {/* Duration Unit */}
+                                  <TextField
+                                    select
+                                    label="Duration Unit"
+                                    value={
+                                      productFields[product.id]?.durationUnit ||
+                                      ""
+                                    }
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        product,
+                                        "durationUnit",
+                                        e.target.value
+                                      )
+                                    }
+                                    fullWidth
+                                    margin="normal"
+                                    disabled
+                                  >
+                                    {[
+                                      "Month(s)",
+                                      "Day(s)",
+                                      "Hour(s)",
+                                      "Minute(s)",
+                                    ].map((unit) => (
+                                      <MenuItem key={unit} value={unit}>
+                                        {unit}
+                                      </MenuItem>
+                                    ))}
+                                  </TextField>
+
+                                  {/* Duration */}
+                                  <TextField
+                                    label="Duration"
+                                    type="number"
+                                    value={
+                                      productFields[product.id]
+                                        ?.durationInput || ""
+                                    }
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        product,
+                                        "durationInput",
+                                        e.target.value
+                                      )
+                                    }
+                                    fullWidth
+                                    margin="normal"
+                                    inputProps={{ min: 1 }}
+                                    // disabled={productFields[product.id]?.durationUnit?.toLowerCase().replace("(s)", "") === 'day'}
+                                    disabled
+                                  />
+                                </Box>
+                                {productFields[product.id]?.durationUnit ===
+                                  "Hour(s)" && (
+                                  <Box display="flex" gap={2} mt={2}>
+                                    <TextField
+                                      label="First Block Time"
+                                      type="time"
+                                      value={
+                                        productFields[product.id]
+                                          ?.firstBlockTime || ""
+                                      }
+                                      onChange={(e) =>
+                                        handleInputChange(
+                                          product,
+                                          "firstBlockTime",
+                                          e.target.value
+                                        )
+                                      }
+                                      fullWidth
+                                      margin="normal"
+                                      InputLabelProps={{ shrink: true }}
+                                      disabled
+                                    />
+                                    <TextField
+                                      label="Buffer"
+                                      type="number"
+                                      fullWidth
+                                      margin="normal"
+                                      value={
+                                        productFields[product.id]?.buffer || ""
+                                      }
+                                      onChange={(e) =>
+                                        handleInputChange(
+                                          product,
+                                          "buffer",
+                                          e.target.value
+                                        )
+                                      }
+                                      inputProps={{ min: 1 }}
+                                      disabled
+                                      sx={{
+                                        "& input[type=number]::-webkit-inner-spin-button, & input[type=number]::-webkit-outer-spin-button":
+                                          {
+                                            "-webkit-appearance": "none",
+                                            margin: 0,
+                                          },
+                                        "& input[type=number]": {
+                                          "-moz-appearance": "textfield",
+                                        },
+                                      }}
+                                    />
+                                  </Box>
+                                )}
                               </Box>
-                            )}
-                          </Box>
-                          <Box>
-                            <Card>
-                              <LocalizationProvider dateAdapter={AdapterDayjs}>
-                                <StaticDatePicker
-                                  displayStaticWrapperAs="desktop"
-                                  value={selectedDate}
-                                  onChange={(newDate) =>
-                                    dateUpdateFunction(
-                                      dayjs(newDate).format("YYYY-MM-DD")
-                                    )
-                                  }
-                                  shouldDisableDate={shouldDisableDate}
-                                  renderInput={(params) => (
-                                    <TextField {...params} fullWidth />
-                                  )}
-                                  slotProps={{
-                                    textField: {
-                                      fullWidth: true,
-                                      margin: "normal",
-                                    },
-                                  }}
-                                  sx={{ marginTop: "20px" }}
-                                />
-                              </LocalizationProvider>
-                            </Card>
-                          </Box>
-                          <Box
-                            display="flex"
-                            flexDirection="row"
-                            justify-content="center"
-                            alignItems="center"
-                            gap={2}
-                            flexWrap="wrap"
-                            mt={2}
-                          >
-                            {slotLoading ? (
-                              <CircularProgress />
-                            ) : updateDetected ? (
+                              <Box>
+                                <Card>
+                                  <LocalizationProvider
+                                    dateAdapter={AdapterDayjs}
+                                  >
+                                    <StaticDatePicker
+                                      displayStaticWrapperAs="desktop"
+                                      value={selectedDate}
+                                      onChange={(newDate) =>
+                                        dateUpdateFunction(
+                                          dayjs(newDate).format("YYYY-MM-DD")
+                                        )
+                                      }
+                                      shouldDisableDate={shouldDisableDate}
+                                      renderInput={(params) => (
+                                        <TextField {...params} />
+                                      )}
+                                    />
+                                  </LocalizationProvider>
+                                </Card>
+                              </Box>
                               <Box
                                 display="flex"
+                                flexDirection="row"
+                                justify-content="center"
                                 alignItems="center"
-                                color="error.main"
+                                gap={2}
+                                flexWrap="wrap"
+                                mt={2}
                               >
-                                <WarningIcon sx={{ mr: 1 }} />
-                                <Typography>
-                                  Duration, Start Time or Buffer change detected
-                                  click update button to delete previous slots
-                                  and generate new slots...
-                                </Typography>
-                              </Box>
-                            ) : (
-                              productFields[product.id]?.durationArray?.map(
-                                (slot, index) => (
-                                  <Card
-                                    key={index}
-                                    sx={{
-                                      p: 2,
-                                      minWidth: 300,
-                                      maxHeight: 30,
-                                      textAlign: "center",
-                                      position: "relative",
-                                    }}
+                                {slotLoading ? (
+                                  <CircularProgress />
+                                ) : updateDetected ? (
+                                  <Box
+                                    display="flex"
+                                    alignItems="center"
+                                    color="error.main"
                                   >
-                                    <Box
-                                      sx={{
-                                        position: "absolute",
-                                        top: 5,
-                                        right: 5,
-                                      }}
-                                    >
-                                      {(slot !== "Slot required Start Time" ||
-                                        slot !==
-                                          "Slot required Booking Duration" ||
-                                        slot !==
-                                          "Slot required Buffer Time") && (
-                                        <FormControlLabel
-                                          control={
-                                            <Switch
-                                              checked={slot.availability}
-                                              onChange={(e) =>
-                                                handleSlotToggle(
-                                                  e,
-                                                  slot,
-                                                  product.id
-                                                )
-                                              }
-                                              size="small"
-                                            />
-                                          }
-                                          label={
-                                            slot.availability
-                                              ? "Bookable"
-                                              : "Not Bookable"
-                                          }
-                                          labelPlacement="start"
-                                          sx={{
-                                            margin: 0,
-                                            "& .MuiTypography-root": {
-                                              fontSize: "0.75rem", // Adjust the font size as needed
-                                            },
-                                          }}
-                                        />
-                                      )}
-                                    </Box>
-                                    <Typography
-                                      style={{
-                                        marginTop: "20px",
-                                        fontSize: "larger",
-                                        letterSpacing: "2px",
-                                        fontWeight: "700",
-                                      }}
-                                      variant="body1"
-                                    >
-                                      {slot.duration}
+                                    <WarningIcon sx={{ mr: 1 }} />
+                                    <Typography>
+                                      Duration, Start Time or Buffer change
+                                      detected click update button to delete
+                                      previous slots and generate new slots...
                                     </Typography>
-                                  </Card>
-                                )
-                              )
-                            )}
-                            {product.duration_unit === "day" && (
-                              <>
-                                <Typography>
-                                  Availability on <br />
-                                  {selectedDate}
-                                </Typography>
-                                <FormControlLabel
-                                  style={{
-                                    maxHeight: "30px",
-                                    textAlign: "center",
+                                  </Box>
+                                ) : (
+                                  productFields[product.id]?.durationArray?.map(
+                                    (slot, index) => (
+                                      <Card
+                                        key={index}
+                                        sx={{
+                                          p: 2,
+                                          minWidth: 300,
+                                          maxHeight: 30,
+                                          textAlign: "center",
+                                          position: "relative",
+                                        }}
+                                      >
+                                        <Box
+                                          sx={{
+                                            position: "absolute",
+                                            top: 5,
+                                            right: 5,
+                                          }}
+                                        >
+                                          {(slot !==
+                                            "Slot required Start Time" ||
+                                            slot !==
+                                              "Slot required Booking Duration" ||
+                                            slot !==
+                                              "Slot required Buffer Time") && (
+                                            <FormControlLabel
+                                              control={
+                                                <Switch
+                                                  checked={slot.availability}
+                                                  onChange={(e) =>
+                                                    handleSlotToggle(
+                                                      e,
+                                                      slot,
+                                                      product.id
+                                                    )
+                                                  }
+                                                  size="small"
+                                                />
+                                              }
+                                              label={
+                                                slot.availability
+                                                  ? "Bookable"
+                                                  : "Not Bookable"
+                                              }
+                                              labelPlacement="start"
+                                              sx={{
+                                                margin: 0,
+                                                "& .MuiTypography-root": {
+                                                  fontSize: "0.75rem", // Adjust the font size as needed
+                                                },
+                                              }}
+                                            />
+                                          )}
+                                        </Box>
+                                        <Typography
+                                          style={{
+                                            marginTop: "20px",
+                                            fontSize: "larger",
+                                            letterSpacing: "2px",
+                                            fontWeight: "700",
+                                          }}
+                                          variant="body1"
+                                        >
+                                          {slot.duration}
+                                        </Typography>
+                                      </Card>
+                                    )
+                                  )
+                                )}
+                                {product.duration_unit === "day" && (
+                                  <>
+                                    <Typography>
+                                      Availability on <br />
+                                      {selectedDate}
+                                    </Typography>
+                                    {!checkDateUnavailableExist(
+                                      product,
+                                      selectedDate
+                                    ) ? (
+                                      <FormControlLabel
+                                        style={{
+                                          maxHeight: "30px",
+                                          textAlign: "center",
+                                        }}
+                                        control={
+                                          <Switch
+                                            checked={dateAvailability}
+                                            onChange={handleToggle}
+                                          />
+                                        }
+                                        label={
+                                          dateAvailability
+                                            ? "Bookable"
+                                            : "Not Bookable"
+                                        } // Optional: change label dynamically
+                                      />
+                                    ) : (
+                                      <FormControlLabel
+                                        style={{
+                                          maxHeight: "30px",
+                                          textAlign: "center",
+                                        }}
+                                        control={
+                                          <Switch
+                                            checked={dateAvailability}
+                                            onChange={handleToggle}
+                                          />
+                                        }
+                                        label={
+                                          dateAvailability
+                                            ? "Bookable"
+                                            : "Not Bookable"
+                                        } // Optional: change label dynamically
+                                      />
+                                    )}
+                                  </>
+                                )}
+                                <Toast />
+                              </Box>
+
+                              <Grid container spacing={1}>
+                                <Grid item xs={6}>
+                                  <TextField
+                                    label="Min Persons"
+                                    type="number"
+                                    fullWidth
+                                    margin="normal"
+                                    value={
+                                      productFields[product.id]?.minPersons ||
+                                      ""
+                                    }
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        product.id,
+                                        "minPersons",
+                                        e.target.value
+                                      )
+                                    }
+                                    inputProps={{ min: 1 }}
+                                    disabled
+                                    sx={{ display: "none" }}
+                                  />
+                                </Grid>
+                                <Grid item xs={6}>
+                                  <TextField
+                                    label="Max Persons"
+                                    type="number"
+                                    fullWidth
+                                    margin="normal"
+                                    value={
+                                      productFields[product.id]?.maxPersons ||
+                                      ""
+                                    }
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        product.id,
+                                        "maxPersons",
+                                        e.target.value
+                                      )
+                                    }
+                                    inputProps={{ min: 1 }}
+                                    disabled
+                                    sx={{ display: "none" }}
+                                  />
+                                </Grid>
+                              </Grid>
+
+                              {/* <Button variant="contained" color="primary" href={`/product/${product.id}`} sx={{ mt: 2 }}>
+                      View Details
+                    </Button> */}
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  mt: 2,
+                                }}
+                              >
+                                <Button
+                                  variant="contained"
+                                  color="primary"
+                                  onClick={handleUpdate}
+                                  sx={{
+                                    padding: "12px 24px", // Adjust padding for a bigger button
+                                    fontSize: "1rem", // Adjust font size if needed
                                   }}
-                                  control={
-                                    <Switch
-                                      checked={dateAvailability}
-                                      onChange={handleToggle}
-                                    />
-                                  }
-                                  label={
-                                    dateAvailability
-                                      ? "Bookable"
-                                      : "Not Bookable"
-                                  } // Optional: change label dynamically
-                                />
-                              </>
-                            )}
-                            <Toast />
-                          </Box>
-
-                          <Grid container spacing={1}>
-                            <Grid item xs={6}>
-                              <TextField
-                                label="Min Persons"
-                                type="number"
-                                fullWidth
-                                margin="normal"
-                                value={
-                                  productFields[product.id]?.minPersons || ""
-                                }
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    product.id,
-                                    "minPersons",
-                                    e.target.value
-                                  )
-                                }
-                                inputProps={{ min: 1 }}
-                              />
-                            </Grid>
-                            <Grid item xs={6}>
-                              <TextField
-                                label="Max Persons"
-                                type="number"
-                                fullWidth
-                                margin="normal"
-                                value={
-                                  productFields[product.id]?.maxPersons || ""
-                                }
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    product.id,
-                                    "maxPersons",
-                                    e.target.value
-                                  )
-                                }
-                                inputProps={{ min: 1 }}
-                              />
-                            </Grid>
-                          </Grid>
-
-                          {/* <Button variant="contained" color="primary" href={`/product/${product.id}`} sx={{ mt: 2 }}>
-                View Details
-              </Button> */}
-                          <Box
-                            sx={{
-                              display: "flex",
-                              justifyContent: "center",
-                              mt: 2,
-                            }}
-                          >
-                            <Button
-                              variant="contained"
-                              color="primary"
-                              onClick={handleUpdate}
-                              sx={{
-                                padding: "12px 24px", // Adjust padding for a bigger button
-                                fontSize: "1rem", // Adjust font size if needed
-                              }}
-                            >
-                              Update
-                            </Button>
-                          </Box>
-                        </Paper>
-                      </AccordionDetails>
-                    </Accordion>
-                  ))}
+                                >
+                                  Update
+                                </Button>
+                              </Box>
+                            </Paper>
+                          </AccordionDetails>
+                        </Accordion>
+                      ))}
+                    </>
+                    //)
+                  )}
                 </Box>
               </>
             )}
           </Grid>
         </Grid>
       </Container>
+      <Modal
+        open={open}
+        onClose={() => handleClose()}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box
+          sx={{
+            ...modalStyle,
+            color: "white",
+            overflowY: "auto",
+            maxHeight: "90vh",
+          }}
+        >
+          <Typography
+            id="modal-modal-title"
+            sx={{ color: "white" }}
+            variant="h6"
+            component="h2"
+          >
+            Multiple Updates
+          </Typography>
+          <div id="modal-modal-description">
+            <Box>
+              <Card>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <StaticDatePicker
+                    displayStaticWrapperAs="desktop"
+                    value={selectedMultipleDate}
+                    onChange={(newDate) =>
+                      dateMultipleUpdateFunction(
+                        dayjs(newDate).format("YYYY-MM-DD")
+                      )
+                    }
+                    shouldDisableDate={shouldDisableDate}
+                    renderInput={(params) => (
+                                        <TextField {...params} />
+                                      )}
+                  />
+                </LocalizationProvider>
+              </Card>
+              {filteredProducts && filteredProducts.length > 0 ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: "16px",
+                  }}
+                >
+                  {" "}
+                  {/* Container for cards */}
+                  {filteredProducts.map((product) => (
+                    <Card
+                      key={product.id}
+                      sx={{
+                        flex: "1 1 calc(50% - 16px)",
+                        cursor: "pointer",
+                        padding: "16px",
+                        maxWidth: "285px",
+                        border: selectedProductIds.includes(product.id)
+                          ? "2px solid red"
+                          : "none",
+                      }}
+                      onClick={() => handleCardClick(product.id)}
+                    >
+                      {" "}
+                      {/* Card styling */}
+                      <Typography sx={{ color: "white" }}>
+                        {product.name}
+                      </Typography>
+                      <Typography sx={{ color: "white", fontSize: "10px" }}>
+                        {checkDateUnavailableExist(
+                          product,
+                          selectedMultipleDate
+                        )
+                          ? "Not Bookable"
+                          : "Bookable"}
+                      </Typography>
+                    </Card>
+                  ))}
+                </Box>
+              ) : (
+                <Typography sx={{ color: "white" }}>
+                  No product found!
+                </Typography>
+              )}
+              {loadingMultiple ? (
+                <CircularProgress />
+              ) : (
+                <>
+                  <Typography sx={{ color: "white" }}>
+                    Availability on <br />
+                    {selectedMultipleDate}
+                  </Typography>
+                  <FormControlLabel
+                    style={{ maxHeight: "30px", textAlign: "center" }}
+                    sx={{ color: "white" }}
+                    control={
+                      <Switch
+                        checked={dateMultipleAvailability}
+                        onChange={handleMultipleToggle}
+                      />
+                    }
+                    label={
+                      dateMultipleAvailability ? "Bookable" : "Not Bookable"
+                    }
+                  />
+                </>
+              )}
+            </Box>
+          </div>
+          {loadingMultiple ? (
+            <CircularProgress />
+          ) : (
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+              {" "}
+              {/* Add a container for buttons */}
+              <Button onClick={() => handleClose()} sx={{ mr: 1 }}>
+                Close
+              </Button>{" "}
+              {/* Add spacing between buttons */}
+              <Button
+                onClick={() => handleMultipleSubmit()}
+                variant="contained"
+                color="primary"
+              >
+                Submit
+              </Button>
+            </Box>
+          )}
+        </Box>
+      </Modal>
     </ThemeProvider>
   );
 }

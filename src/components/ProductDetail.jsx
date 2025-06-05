@@ -1,17 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import {
-  Container,
-  Typography,
-  CircularProgress,
-  Card,
-  CardMedia,
-  Grid,
-  Button,
-  Alert,
-  List,
-  ListItem,
-} from "@mui/material";
+import { Container, Typography, CircularProgress, Card, CardMedia, Grid, Button, Alert, List, ListItem } from "@mui/material";
 import axios from "axios";
 
 function ProductDetail() {
@@ -22,15 +11,12 @@ function ProductDetail() {
   useEffect(() => {
     const fetchProductDetail = async () => {
       try {
-        const response = await axios.get(
-          `${process.env.React_APP_API_URL}/wp-json/wc-bookings/v1/products/${id}`,
-          {
-            auth: {
-              username: "ck_cb8d0d61726f318ddc43be3407749e7a58360fe1",
-              password: "cs_bd55fa6bc205f402e50fdc25876032bb9c45b2ba",
-            },
-          }
-        );
+        const response = await axios.get(`https://cretaluxurycruises.gr/wp-json/wc-bookings/v1/products/${id}`, {
+          auth: {
+            username: "ck_a2c988ce8493b2bb698b2cb117f12199f26602fe",
+            password: "cs_0eeee35e62b2b2615e33dee615f5ca2fccd17da2",
+          },
+        });
         setProduct(response.data);
       } catch (error) {
         console.error("Error fetching product details:", error);
@@ -54,9 +40,7 @@ function ProductDetail() {
             <CardMedia
               component="img"
               height="400"
-              image={
-                product.images[0]?.src || "https://via.placeholder.com/400"
-              }
+              image={product.images[0]?.src || "https://via.placeholder.com/400"}
               alt={product.name}
             />
           </Card>
@@ -94,9 +78,7 @@ function ProductDetail() {
               <ListItem key={index}>{feature}</ListItem>
             ))}
           </List>
-          <Alert severity="info">
-            Please insert total number of persons, including kids and babies.
-          </Alert>
+          <Alert severity="info">Please insert total number of persons, including kids and babies.</Alert>
           <Typography variant="body1" gutterBottom>
             Persons: <strong>1</strong>
           </Typography>

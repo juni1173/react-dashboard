@@ -1,15 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Box from "@mui/material/Box";
 import { CircularProgress } from "@mui/material";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
-// import Link from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import IconButton from "@mui/material/IconButton";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
+
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -17,6 +17,8 @@ function Login() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+
   const handleEmailChange = (event) => {
     setEmail(event.target.value);
   };
@@ -45,7 +47,7 @@ function Login() {
             JSON.stringify(response.data.data)
           );
 
-          window.location.href = "/portal-app/dashboard";
+          window.location.href = "/portal-app/en/dashboard";
         } else {
           setError(response.data.message);
           setLoading(false);
@@ -56,7 +58,7 @@ function Login() {
         setLoading(false);
       });
   };
-
+ 
   return (
     <Box
       sx={{
@@ -81,7 +83,7 @@ function Login() {
             </Alert>
           )}
           <TextField
-            type="email"
+            type="text"
             value={email}
             onChange={handleEmailChange}
             variant="filled"
@@ -116,10 +118,6 @@ function Login() {
               Login
             </Button>
           )}
-
-          {/* <p>
-            Don't have an account? <Link href="/register">Sign up</Link>
-          </p> */}
         </form>
       </Container>
     </Box>
