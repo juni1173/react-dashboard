@@ -28,6 +28,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Header from "./header";
+import BulkUpdate from "./bulkUpdate";
 
 function List() {
   const navigate = useNavigate();
@@ -117,8 +118,6 @@ function List() {
         username: process.env.REACT_APP_USERNAME,
         password: process.env.REACT_APP_PASSWORD,
       };
-      console.log(` auth is ${JSON.stringify(auth)} `);
-      console.log(` API URL is ${process.env.React_APP_API_URL} `);
       const response = await axios.get(
         `${process.env.React_APP_API_URL}//wp-json/wc-bookings/v1/products?per_page=50`,
         {
@@ -130,6 +129,7 @@ function List() {
         (product) => product.status === "publish"
       );
       setProducts(activeProducts);
+      setFilteredProducts(activeProducts);
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
@@ -760,6 +760,23 @@ function List() {
                     />
                   </Box>
                 </Card>
+                {
+                  // (selectedProduct) &&
+                  filterProducts.length > 0 && (
+                     <Button
+                              variant="contained"
+                              color="primary"
+                              onClick={() => {
+                                setSelectedProduct("");
+                                setProductFields({});
+                                setUpdateDetected(false);
+                              }}
+                              sx={{ mt: 2, mb: 2 }} 
+                            >
+                              Bulk Update
+                            </Button>
+                  )
+                }
                 <Box>
                   {filteredProducts.map((product) => (
                     <Accordion
@@ -934,6 +951,16 @@ function List() {
                                     )
                                   }
                                   shouldDisableDate={shouldDisableDate}
+                                  renderInput={(params) => (
+                                    <TextField {...params} fullWidth />
+                                  )}
+                                  slotProps={{
+                                    textField: {
+                                      fullWidth: true,
+                                      margin: "normal",
+                                    },
+                                  }}
+                                  sx={{ marginTop: "20px" }}
                                 />
                               </LocalizationProvider>
                             </Card>

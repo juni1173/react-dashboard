@@ -33,7 +33,7 @@ function Login() {
     event.preventDefault();
     setLoading(true);
     axios
-      .post("https://blogpepper.com/backend/api/login.php", {
+      .post(`${process.env.React_APP_API_URL}/portal-app/authentication/backend/api/login.php`, {
         email: email,
         password: password,
       })

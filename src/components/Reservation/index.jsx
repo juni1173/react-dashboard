@@ -217,6 +217,10 @@ const Index = () => {
                       "date"
                     )
                   }
+                  renderInput={(params) => (
+                    <TextField {...params} fullWidth variant="outlined" />
+                  )}
+                  
                 />
               )}
               {searchType === "range" && (
@@ -233,6 +237,9 @@ const Index = () => {
                             from: dayjs(newDate).format("YYYY-MM-DD"),
                           })
                         }
+                        renderInput={(params) => (
+                          <TextField {...params} fullWidth variant="outlined" />
+                        )}
                       />
                     </Grid>
                     <Grid item xs={12} sm={6}>
@@ -245,6 +252,9 @@ const Index = () => {
                             to: dayjs(newDate).format("YYYY-MM-DD"),
                           })
                         }
+                        renderInput={(params) => (
+                          <TextField {...params} fullWidth variant="outlined" />
+                        )}
                       />
                     </Grid>
                   </Grid>
