@@ -115,12 +115,18 @@ const Index = () => {
         password: "KMQJ aU1q PZMs Cggm yFyu f8sH",
       };
       console.warn("Fetching orders with date range:", auth, dateRange);
+      // Check if dateRange.to is a valid date
+      const isValidToDate = dayjs(dateRange.to).isValid();
+      const toDate = isValidToDate
+        ? dayjs(dateRange.to).format("YYYY-MM-DD")
+        : dayjs(dateRange.from).format("YYYY-MM-DD");
+
       const ordersResponse = await axios.get(
         `${apiUrl}/custom-api/v1/orders-by-date`,
         {
           params: {
             from: dayjs(dateRange.from).format("YYYY-MM-DD"),
-            to: dayjs(dateRange.to).format("YYYY-MM-DD"),
+            to: toDate,
           },
           auth,
         }
