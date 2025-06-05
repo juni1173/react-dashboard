@@ -38,7 +38,7 @@ const Board = ({ orders, loading, callback }) => {
     try {
       // Fetch order first to verify existence
       const orderResponse = await axios.get(
-        `https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc/v3/orders/${id}`,
+        `${process.env.React_APP_API_URL}/wp-json/wc/v3/orders/${id}`,
         {
           auth: {
             username: process.env.REACT_APP_USERNAME,
@@ -55,7 +55,7 @@ const Board = ({ orders, loading, callback }) => {
 
       // Now cancel order
       const response = await axios.put(
-        `https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc/v3/orders/${id}`,
+        `${process.env.React_APP_API_URL}/wp-json/wc/v3/orders/${id}`,
         { status: "cancelled" },
         {
           auth: {

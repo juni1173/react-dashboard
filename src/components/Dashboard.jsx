@@ -112,14 +112,15 @@ function List() {
   }, [navigate]);
   const fetchProducts = async () => {
     try {
-      // const response = await axios.get("https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc/v3/products?per_page=50", {
+      // const response = await axios.get("https://cretaluxurycruises.gr/wp-json/wc/v3/products?per_page=50", {
       const auth = {
         username: process.env.REACT_APP_USERNAME,
         password: process.env.REACT_APP_PASSWORD,
       };
       console.log(` auth is ${JSON.stringify(auth)} `);
+      console.log(` API URL is ${process.env.React_APP_API_URL} `);
       const response = await axios.get(
-        "https://cretaluxurycruises.dev6.inglelandi.com//wp-json/wc-bookings/v1/products?per_page=50",
+        `${process.env.React_APP_API_URL}//wp-json/wc-bookings/v1/products?per_page=50`,
         {
           auth,
         }
@@ -138,9 +139,9 @@ function List() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        // const response = await axios.get("https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc/v3/products?per_page=50", {
+        // const response = await axios.get("https://cretaluxurycruises.gr/wp-json/wc/v3/products?per_page=50", {
         const response = await axios.get(
-          "https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc-bookings/v1/products/categories?per_page=20",
+          `${process.env.React_APP_API_URL}/wp-json/wc-bookings/v1/products/categories?per_page=20`,
           {
             auth: {
               username: process.env.REACT_APP_USERNAME,
@@ -389,7 +390,7 @@ function List() {
 
     try {
       const response = await axios.put(
-        `https://cretaluxurycruises.dev6.inglelandi.com/wp-json/wc-bookings/v1/products/${selectedProduct.id}`,
+        `${process.env.React_APP_API_URL}/wp-json/wc-bookings/v1/products/${selectedProduct.id}`,
         {
           acf: {
             cruise_duration: convertSlotsToString(product?.durationArray) || [], // ACF field for duration
